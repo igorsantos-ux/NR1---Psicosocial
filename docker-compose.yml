@@ -1,18 +1,50 @@
 version: '3.8'
 
 services:
+  # Base de dados (opcional se usar SQLite, mas pronta para Postgres)
   db:
     image: postgres:15-alpine
     container_name: pgr-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: pgr_db
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-pgr_db}
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # Backend PGR
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pgr-backend
+    restart: always
+    ports:
+      - '3001:3001'
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-file:./prisma/dev.db}
+      - PORT=3001
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - sqlite_data:/app/prisma
+
+  # Frontend PGR
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: pgr-frontend
+    restart: always
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
+  sqlite_data:
