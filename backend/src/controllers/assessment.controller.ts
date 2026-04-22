@@ -61,6 +61,17 @@ export const CompanyController = {
     } catch (error) {
       res.status(500).json({ error: 'Erro ao listar empresas' });
     }
+  },
+
+  async listGhes(req: Request, res: Response) {
+    try {
+      const ghes = await prisma.gHE.findMany({
+        include: { company: true }
+      });
+      res.json(ghes);
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao listar GHEs' });
+    }
   }
 };
 
@@ -104,6 +115,42 @@ export const AssessmentController = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Erro ao processar questionário' });
+    }
+  },
+
+  async list(req: Request, res: Response) {
+    try {
+      const assessments = await prisma.assessment.findMany({
+        include: { 
+          ghe: { 
+            include: { company: true } 
+          },
+          actionPlan: true
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      res.json(assessments);
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao listar avaliações' });
+    }
+  },
+
+  async getById(req: Request, res: Response) {
+    const { id } = req.params;
+    try {
+      const assessment = await prisma.assessment.findUnique({
+        where: { id },
+        include: { 
+          ghe: { 
+            include: { company: true } 
+          },
+          actionPlan: true
+        }
+      });
+      if (!assessment) return res.status(404).json({ error: 'Avaliação não encontrada' });
+      res.json(assessment);
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao buscar avaliação' });
     }
   }
 };

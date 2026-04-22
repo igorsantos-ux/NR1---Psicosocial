@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Questionnaire from './pages/Questionnaire';
 import Dashboard from './pages/Dashboard';
 import RegisterCompany from './pages/RegisterCompany';
+import ActionPlans from './pages/ActionPlans';
+import GheManager from './pages/GheManager';
+import Settings from './pages/Settings';
 import './index.css';
 
 function App() {
@@ -15,6 +18,9 @@ function App() {
         {/* Rota do Dashboard Administrativo */}
         <Route path="/admin" element={<Dashboard />} />
         <Route path="/admin/companies" element={<RegisterCompany />} />
+        <Route path="/admin/plans" element={<ActionPlans />} />
+        <Route path="/admin/ghes" element={<GheManager />} />
+        <Route path="/admin/settings" element={<Settings />} />
         
         {/* Redirecionamento Padrão */}
         <Route path="/" element={<Navigate to="/maravilha-linguicas/form" />} />
