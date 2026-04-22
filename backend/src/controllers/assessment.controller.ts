@@ -139,7 +139,7 @@ export const AssessmentController = {
     const { id } = req.params;
     try {
       const assessment = await prisma.assessment.findUnique({
-        where: { id },
+        where: { id: id as string },
         include: { 
           ghe: { 
             include: { company: true } 
