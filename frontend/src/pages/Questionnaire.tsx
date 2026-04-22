@@ -24,6 +24,7 @@ export default function Questionnaire() {
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [error404, setError404] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
 
   useEffect(() => {
@@ -31,8 +32,13 @@ export default function Questionnaire() {
       try {
         const res = await api.get(`/companies/${slug}`);
         setCompany(res.data);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Erro ao carregar empresa');
+        if (err.response?.status === 404) {
+          setError404(true);
+        } else {
+          setToast({ show: true, message: 'Erro de conexão com o servidor.', type: 'error' });
+        }
       }
     };
     fetchCompany();
@@ -54,7 +60,29 @@ export default function Questionnaire() {
     }
   };
 
-  if (!company) return <div className="p-8 text-center">Carregando...</div>;
+  if (error404) {
+    return (
+      <div className="min-h-screen bg-clinicfy-light p-8 flex flex-col items-center justify-center text-center">
+        <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md border border-gray-100">
+          <div className="bg-red-50 text-red-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Factory size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-clinicfy-dark mb-2">Link Inválido</h2>
+          <p className="text-gray-500 mb-6">Não encontramos nenhuma empresa ativa com este endereço. Verifique se o link está correto.</p>
+          <button onClick={() => window.location.href = '/admin'} className="btn-primary w-full">Ir para o Início</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!company) return (
+    <div className="min-h-screen bg-clinicfy-light p-8 flex flex-col items-center justify-center text-center">
+      <div className="animate-pulse flex flex-col items-center">
+        <div className="bg-clinicfy-teal/20 w-12 h-12 rounded-full mb-4"></div>
+        <p className="text-gray-400 font-medium">Carregando...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-clinicfy-light p-4 md:p-8 flex flex-col items-center">

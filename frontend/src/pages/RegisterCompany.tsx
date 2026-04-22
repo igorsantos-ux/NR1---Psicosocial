@@ -11,7 +11,7 @@ export default function RegisterCompany() {
     cnae: '',
     riskLevel: '1',
   });
-  const [ghes, setGhes] = useState<string[]>(['Produção', 'Administrativo']);
+  const [ghes, setGhes] = useState<string[]>([]);
   const [newGhe, setNewGhe] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');

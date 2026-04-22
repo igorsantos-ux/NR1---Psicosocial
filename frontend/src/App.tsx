@@ -23,7 +23,7 @@ function App() {
         <Route path="/admin/settings" element={<Settings />} />
         
         {/* Redirecionamento Padrão */}
-        <Route path="/" element={<Navigate to="/maravilha-linguicas/form" />} />
+        <Route path="/" element={<Navigate to="/admin/companies" />} />
       </Routes>
     </Router>
   );
