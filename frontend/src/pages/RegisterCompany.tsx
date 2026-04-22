@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import { Building2, FileText, Hash, Layers, Plus, Trash2, Link as LinkIcon, Copy, CheckCircle2 } from 'lucide-react';
 import api from '../api/api';
+import Toast from '../components/Toast';
 
 export default function RegisterCompany() {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ export default function RegisterCompany() {
   const [loading, setLoading] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
 
   const handleAddGhe = () => {
     if (newGhe.trim() && !ghes.includes(newGhe.trim())) {
@@ -36,12 +38,12 @@ export default function RegisterCompany() {
         ghes
       });
       
-      const slug = response.data.slug;
-      const url = `${window.location.origin}/${slug}/form`;
       setGeneratedLink(url);
-    } catch (error) {
+      setToast({ show: true, message: 'Empresa cadastrada com sucesso!', type: 'success' });
+    } catch (error: any) {
       console.error(error);
-      alert('Erro ao cadastrar empresa. Verifique se o CNPJ já existe.');
+      const errorMsg = error.response?.data?.error || 'Erro ao cadastrar empresa. Verifique os dados.';
+      setToast({ show: true, message: errorMsg, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -242,6 +244,12 @@ export default function RegisterCompany() {
           </div>
         </div>
       </div>
+      <Toast 
+        show={toast.show} 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ ...toast, show: false })} 
+      />
     </Layout>
   );
 }

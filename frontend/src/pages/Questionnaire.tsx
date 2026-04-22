@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/api';
+import Toast from '../components/Toast';
 import { ClipboardCheck, ArrowRight, CheckCircle2, Factory } from 'lucide-react';
 
 const QUESTIONS = [
@@ -23,6 +24,7 @@ export default function Questionnaire() {
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
 
   useEffect(() => {
     const fetchCompany = async () => {
@@ -46,7 +48,7 @@ export default function Questionnaire() {
       setResult(res.data);
       setStep(4);
     } catch (err) {
-      alert('Erro ao enviar questionário');
+      setToast({ show: true, message: 'Não foi possível enviar suas respostas agora.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -180,6 +182,12 @@ export default function Questionnaire() {
           </div>
         )}
       </main>
+      <Toast 
+        show={toast.show} 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ ...toast, show: false })} 
+      />
     </div>
   );
 }
