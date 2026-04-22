@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  cnpj      String   @unique
+  cnae      String?
+  riskLevel Int?
+  ghes      GHE[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GHE {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id])
+  assessments Assessment[]
+  createdAt   DateTime     @default(now())
+}
+
+model Assessment {
+  id             String      @id @default(uuid())
+  gheId          String
+  ghe            GHE         @relation(fields: [gheId], references: [id])
+  employeeName   String?
+  answers        Json        // Respostas do questionário (JSON)
+  aiRawResult    String?     // Resposta bruta da IA
+  aiProcessed    Boolean     @default(false)
+  riskMatrix     Json?       // Resultado da matriz AIHA (JSON)
+  actionPlan     ActionPlan?
+  status         String      @default("PENDING") // PENDING, ANALYZED, VALIDATED, REJECTED
+  engineerComment String?
+  createdAt      DateTime    @default(now())
+}
+
+model ActionPlan {
+  id             String     @id @default(uuid())
+  assessmentId   String     @unique
+  assessment     Assessment @relation(fields: [assessmentId], references: [id])
+  items          Json       // Medidas de controle, responsáveis e cronograma (JSON)
+  status         String     @default("DRAFT") // DRAFT, VALIDATED
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String // Para login fixo do Denis
+  role     String @default("ENGINEER")
+}

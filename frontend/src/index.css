@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --color-clinicfy-pink: #E396AE;
+  --color-clinicfy-teal: #4EA8B6;
+  --color-clinicfy-light: #F8FAFC;
+  --color-clinicfy-dark: #0F172A;
+  --font-family-sans: "Poppins", "Inter", sans-serif;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-clinicfy-light text-clinicfy-dark font-sans;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-clinicfy-pink text-white px-6 py-3 rounded-xl font-semibold transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-clinicfy-pink/20;
+  }
+  
+  .btn-secondary {
+    @apply bg-clinicfy-teal text-white px-6 py-3 rounded-xl font-semibold transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-clinicfy-teal/20;
+  }
+
+  .card {
+    @apply bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md;
+  }
+
+  .input-field {
+    @apply w-full p-3 rounded-xl border border-gray-200 focus:border-clinicfy-teal focus:ring-1 focus:ring-clinicfy-teal outline-none transition-all;
+  }
+}
