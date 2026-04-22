@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.10",
     "tailwindcss": "^4.2.4",
@@ -16,6 +18,8 @@
     "vite": "^8.0.9"
   },
   "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "@tailwindcss/postcss": "^4.2.4",
     "axios": "^1.15.1",
     "clsx": "^2.1.1",
