@@ -38,6 +38,8 @@ export default function RegisterCompany() {
         ghes
       });
       
+      const slug = response.data.slug;
+      const url = `${window.location.origin}/${slug}/form`;
       setGeneratedLink(url);
       setToast({ show: true, message: 'Empresa cadastrada com sucesso!', type: 'success' });
     } catch (error: any) {
