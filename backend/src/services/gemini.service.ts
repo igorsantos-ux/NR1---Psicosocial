@@ -7,7 +7,7 @@ export class GeminiService {
     const apiKey = process.env.GEMINI_API_KEY || "";
     
     // URL direta da API do Google Gemini
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
 
     const prompt = `
       Você é um Engenheiro de Segurança do Trabalho especialista em NR 01 e riscos psicossociais.
