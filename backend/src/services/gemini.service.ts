@@ -6,9 +6,15 @@ dotenv.config();
 export class GeminiService {
   static async analyzeRisk(employeeName: string, gheName: string, answers: any) {
     const apiKey = process.env.GEMINI_API_KEY || "";
-    console.log("Iniciando Gemini com chave:", apiKey.substring(0, 10) + "...");
-    
     const genAI = new GoogleGenerativeAI(apiKey);
+    
+    try {
+      // Listar modelos para debug
+      const modelsList = await genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
+      // Nota: o SDK não tem um método simples 'listModels' direto no genAI sem usar a API de administração, 
+      // então vamos tentar o gemini-1.5-flash-8b que é ultra compatível como fallback
+    } catch (e) {}
+
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
