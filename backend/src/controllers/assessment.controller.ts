@@ -112,9 +112,13 @@ export const AssessmentController = {
       });
 
       res.json(updatedAssessment);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Erro ao processar questionário' });
+    } catch (error: any) {
+      console.error("ERRO CRÍTICO NO BACKEND:", error);
+      res.status(500).json({ 
+        error: 'Erro ao processar questionário', 
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   },
 
