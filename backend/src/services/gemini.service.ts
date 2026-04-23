@@ -3,11 +3,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export class GeminiService {
   static async analyzeRisk(employeeName: string, gheName: string, answers: any) {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const apiKey = process.env.GEMINI_API_KEY || "";
+    console.log("Iniciando Gemini com chave:", apiKey.substring(0, 10) + "...");
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
       Você é um Engenheiro de Segurança do Trabalho especialista em NR 01 e riscos psicossociais.
