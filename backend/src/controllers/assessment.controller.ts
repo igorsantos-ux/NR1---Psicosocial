@@ -18,7 +18,11 @@ export const CompanyController = {
   },
 
   async create(req: Request, res: Response) {
-    const { name, cnpj, cnae, riskLevel, ghes } = req.body;
+    const { 
+      name, cnpj, cnae, cnaeDescricao, riskLevel, ghes,
+      endereco, municipio, estado, cep, telefone,
+      totalFuncionarios, horarioTrabalho
+    } = req.body;
     
     // Gerar slug simples
     const slug = name
@@ -36,7 +40,15 @@ export const CompanyController = {
           slug,
           cnpj,
           cnae,
+          cnaeDescricao,
           riskLevel: parseInt(riskLevel) || 1,
+          endereco,
+          municipio,
+          estado,
+          cep,
+          telefone,
+          totalFuncionarios: totalFuncionarios ? parseInt(totalFuncionarios) : null,
+          horarioTrabalho,
           ghes: {
             create: ghes.map((gheName: string) => ({
               name: gheName
@@ -51,12 +63,16 @@ export const CompanyController = {
       if (error.code === 'P2002') {
         return res.status(400).json({ error: 'CNPJ ou Nome de Empresa (Slug) já existe.' });
       }
+      res.status(500).json({ error: 'Erro ao cadastrar empresa' });
     }
   },
 
   async list(req: Request, res: Response) {
     try {
-      const companies = await prisma.company.findMany();
+      const companies = await prisma.company.findMany({
+        include: { ghes: true, _count: { select: { pgrReports: true } } },
+        orderBy: { createdAt: 'desc' }
+      });
       res.json(companies);
     } catch (error) {
       res.status(500).json({ error: 'Erro ao listar empresas' });
@@ -77,38 +93,75 @@ export const CompanyController = {
 
 export const AssessmentController = {
   async create(req: Request, res: Response) {
-    const { gheId, employeeName, answers } = req.body;
+    const { gheId, employeeName, employeeRole, answers } = req.body;
     try {
-      // 1. Criar a avaliação no banco (nome é opcional agora)
+      // 1. Criar a avaliação no banco
       const assessment = await prisma.assessment.create({
         data: {
           gheId,
           employeeName: employeeName || 'Anônimo',
+          employeeRole: employeeRole || 'Não informado',
           answers,
           status: 'PENDING'
         },
-        include: { ghe: true }
+        include: { 
+          ghe: { 
+            include: { company: true } 
+          } 
+        }
       });
 
-      // 2. Chamar a IA para análise assíncrona ou síncrona
-      // Para este MVP vamos fazer síncrono para feedback imediato
-      const aiResult = await GeminiService.analyzeRisk(employeeName, assessment.ghe.name, answers);
+      // 2. Buscar configurações do engenheiro
+      let engineerSettings = await prisma.engineerSettings.findFirst();
+      if (!engineerSettings) {
+        engineerSettings = await prisma.engineerSettings.create({
+          data: {
+            engineerName: 'Denis Antônio',
+            engineerCrea: '',
+            engineerContact: '',
+            companyElaboradora: '',
+          }
+        });
+      }
 
-      // 3. Atualizar avaliação com resultado da IA
+      // 3. Chamar Prompt 1 (Análise Individual) via IA
+      const { result, raw } = await GeminiService.analyzeIndividual({
+        colaboradorId: assessment.id.substring(0, 8),
+        gheName: assessment.ghe.name,
+        cargo: employeeRole || 'Não informado',
+        respostasJson: answers,
+        empresaNome: assessment.ghe.company.name,
+        cnpj: assessment.ghe.company.cnpj,
+        engenheiroNome: engineerSettings.engineerName,
+        creaEngenheiro: engineerSettings.engineerCrea,
+        dataReferencia: new Date().toISOString().split('T')[0] || '',
+      });
+
+      // 4. Atualizar avaliação com resultado da IA
       const updatedAssessment = await prisma.assessment.update({
         where: { id: assessment.id },
         data: {
-          riskMatrix: aiResult.riskMatrix,
+          riskMatrix: result,
+          aiRawResult: raw,
           status: 'ANALYZED',
           aiProcessed: true,
           actionPlan: {
             create: {
-              items: aiResult.actionPlan,
+              items: result.riscos_identificados?.map((r: any) => ({
+                measure: r.orientacao,
+                factor: r.fator,
+                riskLevel: r.nivel_risco,
+                score: r.score,
+                schedule: r.nivel_risco === 'INTOLERÁVEL' ? 'Imediato' : 
+                          r.nivel_risco === 'SUBSTANCIAL' ? '60 dias' : 
+                          r.nivel_risco === 'MODERADO' ? '90 dias' : 'Monitoramento',
+                responsible: 'SST / RH',
+              })) || [],
               status: 'DRAFT'
             }
           }
         },
-        include: { actionPlan: true }
+        include: { actionPlan: true, ghe: { include: { company: true } } }
       });
 
       res.json(updatedAssessment);

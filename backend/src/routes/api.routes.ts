@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { CompanyController, AssessmentController } from '../controllers/assessment.controller';
+import { PgrController, EngineerSettingsController } from '../controllers/pgr.controller';
 
 const router = Router();
 
@@ -13,5 +14,15 @@ router.get('/ghes', CompanyController.listGhes);
 router.get('/assessments', AssessmentController.list);
 router.get('/assessments/:id', AssessmentController.getById);
 router.post('/assessments', AssessmentController.create);
+
+// Rotas do PGR Consolidado
+router.post('/pgr/consolidate/:companyId', PgrController.consolidate);
+router.get('/pgr/reports/:companyId', PgrController.listByCompany);
+router.get('/pgr/reports/detail/:id', PgrController.getDetail);
+router.patch('/pgr/reports/:id/validate', PgrController.validate);
+
+// Rotas de Configurações do Engenheiro
+router.get('/settings/engineer', EngineerSettingsController.get);
+router.put('/settings/engineer', EngineerSettingsController.update);
 
 export default router;

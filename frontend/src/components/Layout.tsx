@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, Settings, Users, LogOut, ShieldCheck, Building2 } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Settings, Users, LogOut, ShieldCheck, Building2, FileText } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, path, active }: any) => (
   <Link
@@ -35,6 +35,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <SidebarItem icon={Building2} label="Cadastrar Empresa" path="/admin/companies" active={location.pathname === '/admin/companies'} />
           <SidebarItem icon={ClipboardList} label="Planos de Ação" path="/admin/plans" active={location.pathname === '/admin/plans'} />
           <SidebarItem icon={Users} label="GHEs e Equipes" path="/admin/ghes" active={location.pathname === '/admin/ghes'} />
+          <SidebarItem icon={FileText} label="Relatório PGR" path="/admin/pgr" active={location.pathname === '/admin/pgr'} />
           <SidebarItem icon={Settings} label="Configurações" path="/admin/settings" active={location.pathname === '/admin/settings'} />
         </nav>
 

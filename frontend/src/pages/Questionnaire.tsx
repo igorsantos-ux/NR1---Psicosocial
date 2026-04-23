@@ -1,26 +1,79 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import api from '../api/api';
 import Toast from '../components/Toast';
-import { ClipboardCheck, ArrowRight, CheckCircle2, Factory } from 'lucide-react';
+import { ClipboardCheck, ArrowRight, ArrowLeft, CheckCircle2, Factory, Briefcase, AlertTriangle } from 'lucide-react';
 
-const QUESTIONS = [
-  { id: 'q1', text: 'Você sente que sua carga de trabalho é excessiva para o tempo disponível?' },
-  { id: 'q2', text: 'Você tem autonomia para decidir como realizar suas tarefas?' },
-  { id: 'q3', text: 'As relações interpessoais no ambiente de trabalho são saudáveis?' },
-  { id: 'q4', text: 'Você sofre pressão excessiva para bater metas ou prazos?' },
-  { id: 'q5', text: 'O ambiente físico (ruído, temperatura, iluminação) é adequado?' },
-  { id: 'q6', text: 'Você sente suporte da sua liderança imediata?' },
-  { id: 'q7', text: 'Há clareza sobre suas responsabilidades e funções?' },
+// 15 Fatores de Risco Psicossocial conforme NR-01 Anexo I
+const CATEGORIES = [
+  {
+    id: 'organizacao',
+    title: 'Organização do Trabalho',
+    description: 'Avalie aspectos relacionados à carga, jornada e ritmo de trabalho.',
+    icon: '🏢',
+    questions: [
+      { id: 'q01', text: 'Você sente que sua carga de trabalho é excessiva para o tempo disponível?', factor: 'Sobrecarga ou ritmo excessivo de trabalho' },
+      { id: 'q02', text: 'Você realiza jornada prolongada ou trabalho em turnos com frequência?', factor: 'Jornada prolongada ou trabalho em turnos' },
+      { id: 'q03', text: 'As metas exigidas pela empresa são inalcançáveis ou geram pressão excessiva?', factor: 'Metas inalcançáveis ou pressão excessiva por produtividade' },
+      { id: 'q04', text: 'Suas atividades são monótonas e repetitivas na maior parte do tempo?', factor: 'Monotonia e repetitividade' },
+    ]
+  },
+  {
+    id: 'relacoes',
+    title: 'Relações Socioprofissionais',
+    description: 'Avalie a qualidade das relações interpessoais no trabalho.',
+    icon: '🤝',
+    questions: [
+      { id: 'q05', text: 'Existe um ambiente conflituoso entre colegas ou com a liderança?', factor: 'Ambiente conflituoso entre colegas ou com liderança' },
+      { id: 'q06', text: 'Você já vivenciou ou presenciou situações de assédio moral ou humilhação?', factor: 'Assédio moral ou situações de humilhação' },
+      { id: 'q07', text: 'Você sente falta de suporte e orientação da sua chefia imediata?', factor: 'Falta de suporte da chefia imediata' },
+      { id: 'q08', text: 'Você se sente isolado socialmente no ambiente de trabalho?', factor: 'Isolamento social no trabalho' },
+    ]
+  },
+  {
+    id: 'condicoes',
+    title: 'Condições e Organização',
+    description: 'Avalie autonomia, reconhecimento e comunicação no trabalho.',
+    icon: '⚙️',
+    questions: [
+      { id: 'q09', text: 'Você sente falta de autonomia ou é submetido a microgestão constante?', factor: 'Falta de autonomia / microgestão' },
+      { id: 'q10', text: 'Você sente falta de reconhecimento ou feedback sobre seu trabalho?', factor: 'Falta de reconhecimento ou feedback' },
+      { id: 'q11', text: 'A comunicação na empresa é ineficaz ou confusa?', factor: 'Comunicação ineficaz na empresa' },
+      { id: 'q12', text: 'Você sente insegurança em relação à manutenção do seu emprego?', factor: 'Insegurança no emprego' },
+    ]
+  },
+  {
+    id: 'estressores',
+    title: 'Estressores Individuais',
+    description: 'Avalie sinais de esgotamento e sofrimento relacionados ao trabalho.',
+    icon: '🧠',
+    questions: [
+      { id: 'q13', text: 'Você apresenta sinais de esgotamento emocional ou burnout?', factor: 'Sinais de esgotamento emocional (burnout)' },
+      { id: 'q14', text: 'Você sente ansiedade ou sofrimento psíquico relacionado ao trabalho?', factor: 'Ansiedade ou sofrimento psíquico relacionado ao trabalho' },
+      { id: 'q15', text: 'De modo geral, sua satisfação com o trabalho está baixa?', factor: 'Baixa satisfação geral com o trabalho' },
+    ]
+  }
+];
+
+const ALL_QUESTIONS = CATEGORIES.flatMap(c => c.questions);
+const TOTAL_STEPS = CATEGORIES.length + 2; // Identificação + 4 categorias + Resultado
+
+const SCALE_LABELS = [
+  { value: 1, label: 'Nunca', color: 'border-green-200 bg-green-50 text-green-700' },
+  { value: 2, label: 'Raramente', color: 'border-lime-200 bg-lime-50 text-lime-700' },
+  { value: 3, label: 'Às vezes', color: 'border-yellow-200 bg-yellow-50 text-yellow-700' },
+  { value: 4, label: 'Frequente', color: 'border-orange-200 bg-orange-50 text-orange-700' },
+  { value: 5, label: 'Sempre', color: 'border-red-200 bg-red-50 text-red-700' },
 ];
 
 export default function Questionnaire() {
   const { slug } = useParams();
   const [company, setCompany] = useState<any>(null);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0); // 0=identificação, 1-4=categorias, 5=resultado
   const [formData, setFormData] = useState({
     gheId: '',
-    answers: {} as any,
+    employeeRole: '',
+    answers: {} as Record<string, number>,
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -33,7 +86,6 @@ export default function Questionnaire() {
         const res = await api.get(`/companies/${slug}`);
         setCompany(res.data);
       } catch (err: any) {
-        console.error('Erro ao carregar empresa');
         if (err.response?.status === 404) {
           setError404(true);
         } else {
@@ -47,18 +99,41 @@ export default function Questionnaire() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      // Formatar respostas com nomes dos fatores
+      const formattedAnswers: Record<string, any> = {};
+      ALL_QUESTIONS.forEach(q => {
+        formattedAnswers[q.factor] = {
+          score: formData.answers[q.id] || 0,
+          question: q.text,
+        };
+      });
+
       const res = await api.post('/assessments', {
         gheId: formData.gheId,
-        answers: formData.answers,
+        employeeRole: formData.employeeRole,
+        answers: formattedAnswers,
       });
       setResult(res.data);
-      setStep(4);
+      setStep(TOTAL_STEPS - 1);
     } catch (err) {
-      setToast({ show: true, message: 'Não foi possível enviar suas respostas agora.', type: 'error' });
+      setToast({ show: true, message: 'Não foi possível enviar suas respostas agora. Tente novamente.', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
+
+  const currentCategory = step >= 1 && step <= CATEGORIES.length ? CATEGORIES[step - 1] : null;
+
+  const isCategoryComplete = () => {
+    if (!currentCategory) return false;
+    return currentCategory.questions.every(q => formData.answers[q.id] !== undefined);
+  };
+
+  const isLastCategory = step === CATEGORIES.length;
+
+  const answeredCount = Object.keys(formData.answers).length;
+  const totalQuestions = ALL_QUESTIONS.length;
+  const progress = step === 0 ? 0 : Math.min((step / (TOTAL_STEPS - 1)) * 100, 100);
 
   if (error404) {
     return (
@@ -85,36 +160,45 @@ export default function Questionnaire() {
   );
 
   return (
-    <div className="min-h-screen bg-clinicfy-light p-4 md:p-8 flex flex-col items-center">
-      <header className="w-full max-w-2xl flex items-center gap-3 mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 p-4 md:p-8 flex flex-col items-center">
+      <header className="w-full max-w-2xl flex items-center gap-3 mb-6">
         <div className="bg-clinicfy-teal p-2 rounded-xl text-white">
           <Factory size={24} />
         </div>
         <div>
           <h1 className="text-xl font-bold text-clinicfy-dark">{company.name}</h1>
-          <p className="text-sm text-gray-500">Gestão de Riscos Ocupacionais (NR 01)</p>
+          <p className="text-sm text-gray-500">Avaliação de Riscos Psicossociais — NR 01</p>
         </div>
       </header>
 
       <main className="w-full max-w-2xl bg-white rounded-3xl p-6 md:p-10 shadow-xl shadow-clinicfy-teal/5 relative overflow-hidden">
         {/* Progress Bar */}
-        <div className="flex gap-1 mb-8">
-          {[1, 2, 3].map((i) => (
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              {step === 0 ? 'Identificação' : step <= CATEGORIES.length ? `Seção ${step} de ${CATEGORIES.length}` : 'Concluído'}
+            </span>
+            <span className="text-[10px] font-bold text-clinicfy-teal">
+              {answeredCount}/{totalQuestions} respondidas
+            </span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2">
             <div 
-              key={i} 
-              className={`h-2 flex-1 rounded-full transition-all duration-500 ${step >= i ? 'bg-clinicfy-teal' : 'bg-gray-100'}`} 
+              className="bg-gradient-to-r from-clinicfy-teal to-emerald-400 h-2 rounded-full transition-all duration-700 ease-out"
+              style={{ width: `${progress}%` }}
             />
-          ))}
+          </div>
         </div>
 
-        {step === 1 && (
+        {/* STEP 0: Identificação */}
+        {step === 0 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold mb-2">Identificação</h2>
-            <p className="text-gray-500 mb-6">Por favor, selecione seu grupo de trabalho para iniciar.</p>
+            <p className="text-gray-500 mb-6">Selecione seu setor e, opcionalmente, informe seu cargo.</p>
             
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium mb-1 ml-1">Seu Setor / GHE</label>
+                <label className="block text-sm font-medium mb-1 ml-1">Seu Setor / GHE <span className="text-red-400">*</span></label>
                 <select 
                   className="input-field appearance-none"
                   value={formData.gheId}
@@ -126,90 +210,200 @@ export default function Questionnaire() {
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1 ml-1 flex items-center gap-2">
+                  <Briefcase size={14} className="text-gray-400" />
+                  Cargo (opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Auxiliar Administrativo, Operador de Máquinas..."
+                  className="input-field"
+                  value={formData.employeeRole}
+                  onChange={(e) => setFormData({ ...formData, employeeRole: e.target.value })}
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mt-4">
+                <div className="flex gap-3">
+                  <ClipboardCheck className="text-blue-500 flex-shrink-0 mt-0.5" size={20} />
+                  <div>
+                    <p className="text-sm font-medium text-blue-800 mb-1">Sobre esta avaliação</p>
+                    <p className="text-xs text-blue-600 leading-relaxed">
+                      Este questionário avalia 15 fatores de risco psicossocial conforme a NR-01 (atualização 2024). 
+                      Suas respostas são <strong>anônimas</strong> e serão analisadas por inteligência artificial para gerar 
+                      o Programa de Gerenciamento de Riscos (PGR) da empresa.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <button 
                 disabled={!formData.gheId}
-                onClick={() => setStep(2)}
+                onClick={() => setStep(1)}
                 className="btn-secondary w-full mt-4 flex items-center justify-center gap-2 group disabled:opacity-50"
               >
-                Próximo <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                Iniciar Avaliação <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
         )}
 
-        {step === 2 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-2xl font-bold mb-2">Avaliação Psicossocial</h2>
-            <p className="text-gray-500 mb-6">Responda de 1 a 5, onde 1 é 'Muito Baixo/Nunca' e 5 é 'Muito Alto/Sempre'.</p>
+        {/* STEP 1-4: Categorias de Perguntas */}
+        {currentCategory && (
+          <div key={currentCategory.id} className="animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-3xl">{currentCategory.icon}</span>
+              <div>
+                <h2 className="text-xl font-bold">{currentCategory.title}</h2>
+                <p className="text-gray-500 text-sm">{currentCategory.description}</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-6">
+              Responda de 1 (Nunca) a 5 (Sempre)
+            </p>
             
-            <div className="space-y-8">
-              {QUESTIONS.map((q) => (
-                <div key={q.id}>
-                  <p className="font-medium mb-3">{q.text}</p>
-                  <div className="flex justify-between gap-2">
-                    {[1, 2, 3, 4, 5].map((val) => (
+            <div className="space-y-6">
+              {currentCategory.questions.map((q, qi) => (
+                <div key={q.id} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
+                  <p className="font-medium mb-3 text-sm text-clinicfy-dark">
+                    <span className="text-clinicfy-teal font-bold mr-1.5">{qi + 1}.</span>
+                    {q.text}
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {SCALE_LABELS.map((scale) => (
                       <button
-                        key={val}
+                        key={scale.value}
                         onClick={() => setFormData({ 
                           ...formData, 
-                          answers: { ...formData.answers, [q.id]: val } 
+                          answers: { ...formData.answers, [q.id]: scale.value } 
                         })}
-                        className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center font-bold transition-all ${
-                          formData.answers[q.id] === val 
-                            ? 'bg-clinicfy-pink border-clinicfy-pink text-white scale-110' 
-                            : 'border-gray-100 text-gray-400 hover:border-clinicfy-pink/30'
+                        className={`flex-1 min-w-[60px] py-2.5 px-1 rounded-xl border-2 text-center transition-all duration-200 ${
+                          formData.answers[q.id] === scale.value 
+                            ? `${scale.color} scale-105 shadow-md font-bold ring-2 ring-offset-1 ring-current/20` 
+                            : 'border-gray-100 bg-white text-gray-400 hover:border-gray-200 hover:bg-gray-50'
                         }`}
                       >
-                        {val}
+                        <div className="text-lg font-bold leading-none mb-0.5">{scale.value}</div>
+                        <div className="text-[9px] uppercase tracking-wider leading-none">{scale.label}</div>
                       </button>
                     ))}
                   </div>
                 </div>
               ))}
               
-              <div className="flex gap-3 mt-8">
-                <button onClick={() => setStep(1)} className="flex-1 p-3 rounded-xl border border-gray-200 font-medium text-gray-500">Voltar</button>
+              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
                 <button 
-                  disabled={Object.keys(formData.answers).length < QUESTIONS.length}
-                  onClick={handleSubmit} 
-                  className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
+                  onClick={() => setStep(step - 1)} 
+                  className="flex-shrink-0 px-5 py-3 rounded-xl border border-gray-200 font-medium text-gray-500 hover:bg-gray-50 transition-colors flex items-center gap-2"
                 >
-                  {loading ? 'Processando IA...' : 'Finalizar'}
+                  <ArrowLeft size={16} /> Voltar
                 </button>
+                
+                {isLastCategory ? (
+                  <button 
+                    disabled={!isCategoryComplete() || loading}
+                    onClick={handleSubmit} 
+                    className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Processando com IA...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={18} />
+                        Finalizar e Enviar
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button 
+                    disabled={!isCategoryComplete()}
+                    onClick={() => setStep(step + 1)}
+                    className="btn-secondary flex-1 flex items-center justify-center gap-2 group disabled:opacity-50"
+                  >
+                    Próxima Seção <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {step === 4 && result && (
-          <div className="animate-in zoom-in duration-500 text-center py-10">
+        {/* STEP RESULTADO */}
+        {step === TOTAL_STEPS - 1 && result && (
+          <div className="animate-in zoom-in duration-500 text-center py-8">
             <div className="mx-auto bg-green-100 text-green-600 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-6">
               <CheckCircle2 size={40} />
             </div>
             <h2 className="text-2xl font-bold mb-2">Obrigado!</h2>
             <p className="text-gray-500 mb-8 max-w-md mx-auto">
-              Sua avaliação foi concluída com sucesso. Nossa inteligência artificial já processou os dados e encaminhou para a revisão do Eng. Denis Antônio.
+              Sua avaliação psicossocial foi concluída com sucesso. Nossa inteligência artificial já processou os dados e encaminhou para revisão técnica.
             </p>
-            <div className="bg-gray-50 p-6 rounded-2xl text-left border border-dashed border-gray-200">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">Resultado Parcial da IA</h3>
-              <div className="space-y-3">
-                {result.riskMatrix?.map((r: any, idx: number) => (
-                  <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-                    <span className="font-medium text-sm">{r.agent}</span>
-                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded ${
-                      r.level === 'Intolerável' ? 'bg-red-100 text-red-600' : 
-                      r.level === 'Substancial' ? 'bg-orange-100 text-orange-600' : 
-                      'bg-green-100 text-green-600'
-                    }`}>
-                      {r.level}
-                    </span>
+            
+            {result.riskMatrix && (
+              <div className="bg-gray-50 p-6 rounded-2xl text-left border border-dashed border-gray-200">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
+                  <AlertTriangle size={14} />
+                  Resumo da Análise (IA)
+                </h3>
+                
+                {/* Nível dominante */}
+                {result.riskMatrix.nivel_risco_dominante && (
+                  <div className={`mb-4 p-3 rounded-xl text-center font-bold text-sm ${
+                    result.riskMatrix.nivel_risco_dominante === 'INTOLERÁVEL' ? 'bg-red-100 text-red-700' :
+                    result.riskMatrix.nivel_risco_dominante === 'SUBSTANCIAL' ? 'bg-orange-100 text-orange-700' :
+                    result.riskMatrix.nivel_risco_dominante === 'MODERADO' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    Nível de Risco Dominante: {result.riskMatrix.nivel_risco_dominante}
                   </div>
-                ))}
+                )}
+
+                <div className="space-y-2">
+                  {result.riskMatrix.riscos_identificados?.slice(0, 5).map((r: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
+                      <span className="font-medium text-xs text-gray-700 flex-1 mr-2">{r.fator}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 font-mono">Score: {r.score}</span>
+                        <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded ${
+                          r.nivel_risco === 'INTOLERÁVEL' ? 'bg-red-100 text-red-600' : 
+                          r.nivel_risco === 'SUBSTANCIAL' ? 'bg-orange-100 text-orange-600' : 
+                          r.nivel_risco === 'MODERADO' ? 'bg-yellow-100 text-yellow-600' :
+                          'bg-green-100 text-green-600'
+                        }`}>
+                          {r.nivel_risco}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {result.riskMatrix.riscos_identificados?.length > 5 && (
+                    <p className="text-[10px] text-gray-400 text-center mt-2">
+                      +{result.riskMatrix.riscos_identificados.length - 5} riscos adicionais identificados
+                    </p>
+                  )}
+                </div>
+
+                {result.riskMatrix.observacoes_tecnicas && (
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 italic">{result.riskMatrix.observacoes_tecnicas}</p>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </div>
         )}
       </main>
+
+      <footer className="w-full max-w-2xl mt-6 text-center">
+        <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+          PGR Smart — Motor de IA para Gestão de Riscos Ocupacionais
+        </p>
+      </footer>
+
       <Toast 
         show={toast.show} 
         message={toast.message} 

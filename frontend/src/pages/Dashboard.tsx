@@ -23,17 +23,20 @@ const RiskCard = ({ assessment }: any) => (
     </div>
 
     <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
-      {assessment.riskMatrix && assessment.riskMatrix.length > 0 ? (
-        assessment.riskMatrix.map((r: any, i: number) => (
+      {assessment.riskMatrix ? (() => {
+        const riscos = assessment.riskMatrix.riscos_identificados || (Array.isArray(assessment.riskMatrix) ? assessment.riskMatrix : []);
+        return riscos.length > 0 ? riscos.slice(0, 3).map((r: any, i: number) => (
           <div key={i} className={`flex-shrink-0 px-3 py-1 rounded-lg border text-xs flex items-center gap-1.5 ${
-            r.level === 'Intolerável' ? 'border-red-100 bg-red-50 text-red-600' : 
-            r.level === 'Substancial' ? 'border-orange-100 bg-orange-50 text-orange-600' : 'border-gray-100 bg-gray-50 text-gray-600'
+            (r.nivel_risco || r.level) === 'INTOLERÁVEL' || (r.nivel_risco || r.level) === 'Intolerável' ? 'border-red-100 bg-red-50 text-red-600' : 
+            (r.nivel_risco || r.level) === 'SUBSTANCIAL' || (r.nivel_risco || r.level) === 'Substancial' ? 'border-orange-100 bg-orange-50 text-orange-600' : 
+            (r.nivel_risco || r.level) === 'MODERADO' || (r.nivel_risco || r.level) === 'Moderado' ? 'border-yellow-100 bg-yellow-50 text-yellow-600' :
+            'border-gray-100 bg-gray-50 text-gray-600'
           }`}>
             <AlertTriangle size={12} />
-            {r.type || r.hazard || 'Risco'}
+            {r.fator || r.type || r.agent || 'Risco'}
           </div>
-        ))
-      ) : (
+        )) : <p className="text-[10px] text-gray-400 italic">Sem riscos identificados</p>;
+      })() : (
         <p className="text-[10px] text-gray-400 italic">Aguardando análise da IA...</p>
       )}
     </div>
