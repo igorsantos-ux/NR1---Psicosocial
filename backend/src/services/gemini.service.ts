@@ -45,9 +45,14 @@ export class GeminiService {
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      // Limpeza de possíveis markdown na resposta do Gemini
-      const cleanJson = text.replace(/```json|```/g, "").trim();
-      return JSON.parse(cleanJson);
+      
+      // Busca o primeiro '{' e o último '}' para extrair apenas o JSON puro
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("Resposta da IA não contém um JSON válido");
+      }
+      
+      return JSON.parse(jsonMatch[0]);
     } catch (error) {
       console.error("Erro na análise do Gemini:", error);
       throw new Error("Falha ao processar análise de risco via IA");
