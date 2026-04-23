@@ -55,7 +55,7 @@ export class GeminiService {
       return JSON.parse(jsonMatch[0]);
     } catch (error) {
       console.error("Erro na análise do Gemini:", error);
-      throw new Error("Falha ao processar análise de risco via IA");
+      throw new Error(`Falha ao processar análise de risco via IA: ${error.message}`);
     }
   }
 }
