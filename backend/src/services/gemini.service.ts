@@ -44,6 +44,12 @@ export class GeminiService {
     };
 
     try {
+      // 1. Tentar listar modelos disponíveis para ver o que essa chave "enxerga"
+      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+      const listResponse = await fetch(listUrl);
+      const listData: any = await listResponse.json();
+      const availableModels = listData.models?.map((m: any) => m.name.replace('models/', '')) || [];
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,7 +60,7 @@ export class GeminiService {
 
       if (!response.ok) {
         console.error("Erro na API do Google:", data);
-        throw new Error(`Google API Error: ${data.error?.message || response.statusText}`);
+        throw new Error(`Google API Error: ${data.error?.message}. Modelos que sua chave enxerga: ${availableModels.join(', ')}`);
       }
 
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
