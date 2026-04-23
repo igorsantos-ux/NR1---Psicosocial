@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -6,16 +5,9 @@ dotenv.config();
 export class GeminiService {
   static async analyzeRisk(employeeName: string, gheName: string, answers: any) {
     const apiKey = process.env.GEMINI_API_KEY || "";
-    const genAI = new GoogleGenerativeAI(apiKey);
     
-    try {
-      // Listar modelos para debug
-      const modelsList = await genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
-      // Nota: o SDK não tem um método simples 'listModels' direto no genAI sem usar a API de administração, 
-      // então vamos tentar o gemini-1.5-flash-8b que é ultra compatível como fallback
-    } catch (e) {}
-
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // URL direta da API do Google Gemini
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const prompt = `
       Você é um Engenheiro de Segurança do Trabalho especialista em NR 01 e riscos psicossociais.
@@ -24,7 +16,7 @@ export class GeminiService {
       5 - Sempre / Muito Alto
 
       Dados do Funcionário:
-      Nome: ${employeeName}
+      Nome: ${employeeName || 'Anônimo'}
       GHE (Grupo Homogêneo de Exposição): ${gheName}
       Respostas: ${JSON.stringify(answers)}
 
@@ -33,10 +25,6 @@ export class GeminiService {
       2. Classificar o Nível de Risco usando a Matriz AIHA (Probabilidade x Consequência): Trivial, Moderado, Substancial ou Intolerável.
       3. Atribuir Grau de Prioridade de 1 a 4.
       4. Sugerir Medidas de Controle, Cronograma e Responsável.
-
-      REGRAS ESPECÍFICAS:
-      - Se houver menção a ruído > 85 dB(A), sugerir protetor auricular e monitoramento anual.
-      - Para riscos psicossociais (estresse, carga de trabalho), sugerir pausas, feedback ou suporte psicológico.
 
       Retorne APENAS um JSON no seguinte formato:
       {
@@ -49,10 +37,27 @@ export class GeminiService {
       }
     `;
 
+    const requestBody = {
+      contents: [{
+        parts: [{ text: prompt }]
+      }]
+    };
+
     try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      const data: any = await response.json();
+
+      if (!response.ok) {
+        console.error("Erro na API do Google:", data);
+        throw new Error(`Google API Error: ${data.error?.message || response.statusText}`);
+      }
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
       
       // Busca o primeiro '{' e o último '}' para extrair apenas o JSON puro
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -63,7 +68,7 @@ export class GeminiService {
       return JSON.parse(jsonMatch[0]);
     } catch (error: any) {
       console.error("Erro na análise do Gemini:", error);
-      throw new Error(`Falha ao processar análise de risco via IA: ${error.message}`);
+      throw new Error(`Falha na IA: ${error.message}`);
     }
   }
 }
