@@ -23,6 +23,14 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copia uma configuração customizada para suportar roteamento do React (opcional mas recomendado)
 RUN echo 'server { \
     listen 80; \
+    location /api/ { \
+        proxy_pass http://backend:3001/api/; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_cache_bypass $http_upgrade; \
+    } \
     location / { \
         root /usr/share/nginx/html; \
         index index.html index.htm; \
