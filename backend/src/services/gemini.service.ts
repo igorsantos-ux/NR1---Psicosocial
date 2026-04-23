@@ -7,7 +7,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export class GeminiService {
   static async analyzeRisk(employeeName: string, gheName: string, answers: any) {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `
       Você é um Engenheiro de Segurança do Trabalho especialista em NR 01 e riscos psicossociais.
