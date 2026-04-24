@@ -71,6 +71,7 @@ export default function Questionnaire() {
   const [company, setCompany] = useState<any>(null);
   const [step, setStep] = useState(0); // 0=identificação, 1-4=categorias, 5=resultado
   const [formData, setFormData] = useState({
+    employeeName: '',
     gheId: '',
     employeeRole: '',
     answers: {} as Record<string, number>,
@@ -109,6 +110,7 @@ export default function Questionnaire() {
       });
 
       const res = await api.post('/assessments', {
+        employeeName: formData.employeeName,
         gheId: formData.gheId,
         employeeRole: formData.employeeRole,
         answers: formattedAnswers,
@@ -193,10 +195,19 @@ export default function Questionnaire() {
         {/* STEP 0: Identificação */}
         {step === 0 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-2xl font-bold mb-2">Identificação</h2>
-            <p className="text-gray-500 mb-6">Selecione seu setor e, opcionalmente, informe seu cargo.</p>
+            <p className="text-gray-500 mb-6">Informe seus dados básicos para iniciar a avaliação.</p>
             
             <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium mb-1 ml-1">Seu Nome Completo <span className="text-red-400">*</span></label>
+                <input
+                  type="text"
+                  placeholder="Informe seu nome"
+                  className="input-field"
+                  value={formData.employeeName}
+                  onChange={(e) => setFormData({ ...formData, employeeName: e.target.value })}
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-1 ml-1">Seu Setor / GHE <span className="text-red-400">*</span></label>
                 <select 
@@ -232,7 +243,7 @@ export default function Questionnaire() {
                     <p className="text-sm font-medium text-blue-800 mb-1">Sobre esta avaliação</p>
                     <p className="text-xs text-blue-600 leading-relaxed">
                       Este questionário avalia 15 fatores de risco psicossocial conforme a NR-01 (atualização 2024). 
-                      Suas respostas são <strong>anônimas</strong> e serão analisadas por inteligência artificial para gerar 
+                      As informações coletadas serão processadas por inteligência artificial para gerar 
                       o Programa de Gerenciamento de Riscos (PGR) da empresa.
                     </p>
                   </div>
@@ -240,7 +251,7 @@ export default function Questionnaire() {
               </div>
 
               <button 
-                disabled={!formData.gheId}
+                disabled={!formData.gheId || !formData.employeeName}
                 onClick={() => setStep(1)}
                 className="btn-secondary w-full mt-4 flex items-center justify-center gap-2 group disabled:opacity-50"
               >

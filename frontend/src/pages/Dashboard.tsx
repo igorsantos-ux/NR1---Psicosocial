@@ -9,7 +9,11 @@ const RiskCard = ({ assessment }: any) => (
     <div className="flex justify-between items-start mb-4">
       <div>
         <h3 className="font-bold text-clinicfy-dark">{assessment.employeeName || 'Colaborador Anônimo'}</h3>
-        <p className="text-xs text-gray-400 font-medium">{assessment.ghe?.name || 'GHE não identificado'}</p>
+        <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+          <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{assessment.ghe?.company?.name || 'Empresa'}</span>
+          <span>•</span>
+          <span>{assessment.ghe?.name || 'GHE não identificado'}</span>
+        </div>
       </div>
       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
         assessment.status === 'ANALYZED' ? 'bg-blue-100 text-blue-600' : 
