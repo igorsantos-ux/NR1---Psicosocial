@@ -37,7 +37,7 @@ const RiskCard = ({ assessment }: any) => (
           </div>
         )) : <p className="text-[10px] text-gray-400 italic">Sem riscos identificados</p>;
       })() : (
-        <p className="text-[10px] text-gray-400 italic">Aguardando análise da IA...</p>
+        <p className="text-[10px] text-gray-400 italic">Coletado / Aguardando Consolidação</p>
       )}
     </div>
 
