@@ -22,19 +22,17 @@ export const PgrController = {
         return res.status(404).json({ error: 'Empresa não encontrada' });
       }
 
-      // 2. Buscar todas as avaliações ANALYZED da empresa
+      // 2. Buscar todas as avaliações da empresa (PENDING ou ANALYZED)
       const assessments = await prisma.assessment.findMany({
         where: {
-          ghe: { companyId: companyId },
-          status: { in: ['ANALYZED', 'VALIDATED'] },
-          aiProcessed: true,
+          ghe: { companyId },
         },
         include: { ghe: true }
       });
 
       if (assessments.length === 0) {
         return res.status(400).json({ 
-          error: 'Nenhuma avaliação processada encontrada para esta empresa. Aguarde o envio e análise dos questionários.' 
+          error: 'Nenhuma avaliação encontrada para esta empresa. Aguarde o envio dos questionários.' 
         });
       }
 
@@ -51,7 +49,7 @@ export const PgrController = {
         });
       }
 
-      // 4. Consolidar análises por GHE
+      // 4. Agrupar RESPOSTAS BRUTAS por GHE
       const gheMap: Record<string, any[]> = {};
       for (const assessment of assessments) {
         const gheName = assessment.ghe.name;
@@ -61,7 +59,7 @@ export const PgrController = {
         gheMap[gheName].push({
           colaborador_id: assessment.id.substring(0, 8),
           cargo: assessment.employeeRole || 'Não informado',
-          riscos: assessment.riskMatrix,
+          respostas: assessment.answers, // RESPOSTAS BRUTAS
         });
       }
 

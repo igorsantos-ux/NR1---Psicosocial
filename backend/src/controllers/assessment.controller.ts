@@ -95,14 +95,15 @@ export const AssessmentController = {
   async create(req: Request, res: Response) {
     const { gheId, employeeName, employeeRole, answers } = req.body;
     try {
-      // 1. Criar a avaliação no banco
+      // 1. Criar a avaliação no banco apenas como PENDING
       const assessment = await prisma.assessment.create({
         data: {
           gheId,
           employeeName: employeeName || 'Anônimo',
           employeeRole: employeeRole || 'Não informado',
           answers,
-          status: 'PENDING'
+          status: 'PENDING',
+          aiProcessed: false
         },
         include: { 
           ghe: { 
@@ -111,66 +112,12 @@ export const AssessmentController = {
         }
       });
 
-      // 2. Buscar configurações do engenheiro
-      let engineerSettings = await prisma.engineerSettings.findFirst();
-      if (!engineerSettings) {
-        engineerSettings = await prisma.engineerSettings.create({
-          data: {
-            engineerName: 'Denis Antônio',
-            engineerCrea: '',
-            engineerContact: '',
-            companyElaboradora: '',
-          }
-        });
-      }
-
-      // 3. Chamar Prompt 1 (Análise Individual) via IA
-      const { result, raw } = await GeminiService.analyzeIndividual({
-        colaboradorId: assessment.id.substring(0, 8),
-        gheName: assessment.ghe.name,
-        cargo: employeeRole || 'Não informado',
-        respostasJson: answers,
-        empresaNome: assessment.ghe.company.name,
-        cnpj: assessment.ghe.company.cnpj,
-        engenheiroNome: engineerSettings.engineerName,
-        creaEngenheiro: engineerSettings.engineerCrea,
-        dataReferencia: new Date().toISOString().split('T')[0] || '',
-      });
-
-      // 4. Atualizar avaliação com resultado da IA
-      const updatedAssessment = await prisma.assessment.update({
-        where: { id: assessment.id },
-        data: {
-          riskMatrix: result,
-          aiRawResult: raw,
-          status: 'ANALYZED',
-          aiProcessed: true,
-          actionPlan: {
-            create: {
-              items: result.riscos_identificados?.map((r: any) => ({
-                measure: r.orientacao,
-                factor: r.fator,
-                riskLevel: r.nivel_risco,
-                score: r.score,
-                schedule: r.nivel_risco === 'INTOLERÁVEL' ? 'Imediato' : 
-                          r.nivel_risco === 'SUBSTANCIAL' ? '60 dias' : 
-                          r.nivel_risco === 'MODERADO' ? '90 dias' : 'Monitoramento',
-                responsible: 'SST / RH',
-              })) || [],
-              status: 'DRAFT'
-            }
-          }
-        },
-        include: { actionPlan: true, ghe: { include: { company: true } } }
-      });
-
-      res.json(updatedAssessment);
+      res.json(assessment);
     } catch (error: any) {
-      console.error("ERRO CRÍTICO AO PROCESSAR AVALIAÇÃO:", error);
+      console.error("ERRO AO SALVAR AVALIAÇÃO:", error);
       res.status(500).json({ 
-        error: 'Erro ao processar questionário', 
+        error: 'Erro ao salvar questionário', 
         message: error.message,
-        details: error.response?.data || error.stack || 'Erro interno no servidor'
       });
     }
   },

@@ -310,7 +310,7 @@ export default function Questionnaire() {
                     {loading ? (
                       <>
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Processando com IA...
+                        Enviando...
                       </>
                     ) : (
                       <>
@@ -341,59 +341,11 @@ export default function Questionnaire() {
             </div>
             <h2 className="text-2xl font-bold mb-2">Obrigado!</h2>
             <p className="text-gray-500 mb-8 max-w-md mx-auto">
-              Sua avaliação psicossocial foi concluída com sucesso. Nossa inteligência artificial já processou os dados e encaminhou para revisão técnica.
+              Sua avaliação psicossocial foi concluída com sucesso. Seus dados foram salvos e serão processados pelo engenheiro responsável na consolidação do PGR da empresa.
             </p>
             
-            {result.riskMatrix && (
-              <div className="bg-gray-50 p-6 rounded-2xl text-left border border-dashed border-gray-200">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-                  <AlertTriangle size={14} />
-                  Resumo da Análise (IA)
-                </h3>
-                
-                {/* Nível dominante */}
-                {result.riskMatrix.nivel_risco_dominante && (
-                  <div className={`mb-4 p-3 rounded-xl text-center font-bold text-sm ${
-                    result.riskMatrix.nivel_risco_dominante === 'INTOLERÁVEL' ? 'bg-red-100 text-red-700' :
-                    result.riskMatrix.nivel_risco_dominante === 'SUBSTANCIAL' ? 'bg-orange-100 text-orange-700' :
-                    result.riskMatrix.nivel_risco_dominante === 'MODERADO' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-green-100 text-green-700'
-                  }`}>
-                    Nível de Risco Dominante: {result.riskMatrix.nivel_risco_dominante}
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  {result.riskMatrix.riscos_identificados?.slice(0, 5).map((r: any, idx: number) => (
-                    <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-                      <span className="font-medium text-xs text-gray-700 flex-1 mr-2">{r.fator}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-400 font-mono">Score: {r.score}</span>
-                        <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded ${
-                          r.nivel_risco === 'INTOLERÁVEL' ? 'bg-red-100 text-red-600' : 
-                          r.nivel_risco === 'SUBSTANCIAL' ? 'bg-orange-100 text-orange-600' : 
-                          r.nivel_risco === 'MODERADO' ? 'bg-yellow-100 text-yellow-600' :
-                          'bg-green-100 text-green-600'
-                        }`}>
-                          {r.nivel_risco}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {result.riskMatrix.riscos_identificados?.length > 5 && (
-                    <p className="text-[10px] text-gray-400 text-center mt-2">
-                      +{result.riskMatrix.riscos_identificados.length - 5} riscos adicionais identificados
-                    </p>
-                  )}
-                </div>
-
-                {result.riskMatrix.observacoes_tecnicas && (
-                  <div className="mt-4 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 italic">{result.riskMatrix.observacoes_tecnicas}</p>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Removida análise individual imediata para economia de tokens */}
+          </div>
           </div>
         )}
       </main>

@@ -252,10 +252,11 @@ DADOS DA EMPRESA:
 GHEs CADASTRADOS:
 ${JSON.stringify(params.ghesListaJson, null, 2)}
 
-ANÁLISES INDIVIDUAIS CONSOLIDADAS POR GHE:
+ANÁLISES INDIVIDUAIS (RESPOSTAS BRUTAS) CONSOLIDADAS POR GHE:
 ${JSON.stringify(params.analisesConsolidadasJson, null, 2)}
 
 INSTRUÇÕES DE GERAÇÃO:
+Você deve analisar as respostas brutas fornecidas para cada GHE e, com base na predominância e severidade dos relatos, gerar a matriz de riscos consolidada e as recomendações técnicas seguindo a metodologia AIHA (P: 1-5, C: 1-4).
 
 BLOCO 1 — IDENTIFICAÇÃO E CABEÇALHO:
 Gere os dados de identificação da empresa e do documento para preenchimento da capa e tabela de dados cadastrais.
