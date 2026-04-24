@@ -3,8 +3,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-// Usando gemini-1.5-flash por ser o modelo estável mais compatível
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+// Usando gemini-2.0-flash conforme lista de modelos disponíveis do usuário
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 /**
  * Extrai JSON puro de uma resposta de texto da IA.
