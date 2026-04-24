@@ -166,11 +166,11 @@ export const AssessmentController = {
 
       res.json(updatedAssessment);
     } catch (error: any) {
-      console.error("ERRO CRÍTICO NO BACKEND:", error);
+      console.error("ERRO CRÍTICO AO PROCESSAR AVALIAÇÃO:", error);
       res.status(500).json({ 
         error: 'Erro ao processar questionário', 
-        details: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        message: error.message,
+        details: error.response?.data || error.stack || 'Erro interno no servidor'
       });
     }
   },

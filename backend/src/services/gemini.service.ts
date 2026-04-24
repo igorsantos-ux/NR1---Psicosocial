@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+// Usando gemini-1.5-flash por ser o modelo estável mais compatível
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 /**
  * Extrai JSON puro de uma resposta de texto da IA.
@@ -30,6 +31,10 @@ async function callGemini(prompt: string): Promise<any> {
     }
   };
 
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY não configurada no servidor (.env ou variáveis de ambiente).');
+  }
+
   const response = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -44,6 +49,10 @@ async function callGemini(prompt: string): Promise<any> {
   }
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  console.log('--- RESPOSTA BRUTA DA IA ---');
+  console.log(text);
+  console.log('----------------------------');
+  
   if (!text) {
     throw new Error('Resposta vazia da IA');
   }
