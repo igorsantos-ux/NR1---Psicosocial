@@ -346,7 +346,6 @@ export default function Questionnaire() {
             
             {/* Removida análise individual imediata para economia de tokens */}
           </div>
-          </div>
         )}
       </main>
 
