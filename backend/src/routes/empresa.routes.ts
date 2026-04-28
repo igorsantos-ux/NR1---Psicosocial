@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
-import { slugify, generateRandomSuffix } from '../utils/stringUtils';
+import { slugify, generateRandomSuffix } from '../utils/stringUtils.js';
 import { z } from 'zod';
 
 const prisma = new PrismaClient();
@@ -48,33 +48,33 @@ export async function empresaRoutes(fastify: FastifyInstance) {
             const empresa = await tx.empresa.create({
                 data: {
                     razaoSocial: data.razaoSocial,
-                    nomeFantasia: data.nomeFantasia,
+                    nomeFantasia: data.nomeFantasia ?? null,
                     cnpj: data.cnpj,
                     cnae: data.cnae,
-                    cnaeDescricao: data.cnaeDescricao,
+                    cnaeDescricao: data.cnaeDescricao ?? null,
                     grauRiscoNr4: data.grauRiscoNr4,
-                    endereco: data.endereco,
-                    municipio: data.municipio,
-                    estado: data.estado,
-                    cep: data.cep,
-                    telefone: data.telefone,
+                    endereco: data.endereco ?? null,
+                    municipio: data.municipio ?? null,
+                    estado: data.estado ?? null,
+                    cep: data.cep ?? null,
+                    telefone: data.telefone ?? null,
                     totalFuncionarios: data.totalFuncionarios,
-                    horarioTrabalho: data.horarioTrabalho,
+                    horarioTrabalho: data.horarioTrabalho ?? null,
                     dataExpiracaoLink: new Date(data.dataExpiracaoLink),
                     subdominio,
                     engenheiroId: data.engenheiroId,
-                    empresaElaboradora: data.empresaElaboradora,
+                    empresaElaboradora: data.empresaElaboradora ?? null,
                     ghes: {
                         create: data.ghes.map(ghe => ({
                             codigo: ghe.codigo,
                             nome: ghe.nome,
-                            descricao: ghe.descricao,
-                            ambiente: ghe.ambiente,
+                            descricao: ghe.descricao ?? null,
+                            ambiente: ghe.ambiente ?? null,
                             cargos: {
                                 create: ghe.cargos.map(cargo => ({
                                     nome: cargo.nome,
-                                    cbo: cargo.cbo,
-                                    descricaoAtividade: cargo.descricaoAtividade,
+                                    cbo: cargo.cbo ?? null,
+                                    descricaoAtividade: cargo.descricaoAtividade ?? null,
                                     quantidade: cargo.quantidade,
                                     qtdHomens: cargo.qtdHomens,
                                     qtdMulheres: cargo.qtdMulheres,

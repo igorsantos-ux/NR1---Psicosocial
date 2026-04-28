@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { PrismaClient } from '@prisma/client';
-import { processarGeracaoPGR } from '../workers/pgrGeneratorWorker';
+import { processarGeracaoPGR } from '../workers/pgrGeneratorWorker.js';
 
 const prisma = new PrismaClient();
 
@@ -44,7 +44,7 @@ export async function expirarColetasVencidas() {
             });
 
             // Disparar worker
-            processarGeracaoPGR(pgr.id).catch(err => {
+            processarGeracaoPGR(pgr.id).catch((err: Error) => {
                 console.error(`[Cron] Erro ao disparar geração automática para ${empresa.id}:`, err);
             });
         }

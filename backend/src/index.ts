@@ -2,10 +2,10 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
-import { empresaRoutes } from './routes/empresa.routes';
-import { coletaRoutes } from './routes/coleta.routes';
-import { pgrRoutes } from './routes/pgr.routes';
-import { setupCrons } from './crons/expirarColetas';
+import { empresaRoutes } from './routes/empresa.routes.js';
+import { coletaRoutes } from './routes/coleta.routes.js';
+import { pgrRoutes } from './routes/pgr.routes.js';
+import { setupCrons } from './crons/expirarColetas.js';
 
 dotenv.config();
 

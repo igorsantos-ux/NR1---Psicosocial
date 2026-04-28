@@ -41,9 +41,9 @@ export async function pgrRoutes(fastify: FastifyInstance) {
         // No mundo ideal, usaria BullMQ. Aqui faremos um "fire and forget" ou usaremos uma fila simples.
 
         // Importação dinâmica para evitar loop se necessário
-        const { processarGeracaoPGR } = await import('../workers/pgrGeneratorWorker');
+        const { processarGeracaoPGR } = await import('../workers/pgrGeneratorWorker.js');
 
-        processarGeracaoPGR(pgr.id).catch(err => {
+        processarGeracaoPGR(pgr.id).catch((err: Error) => {
             console.error(`Erro ao processar PGR ${pgr.id}:`, err);
         });
 
@@ -96,7 +96,7 @@ export async function pgrRoutes(fastify: FastifyInstance) {
             where: { id },
             data: {
                 status: 'VALIDADO',
-                observacoesEngenheiro: observacoes,
+                observacoesEngenheiro: observacoes ?? null,
                 validadoPor,
                 validadoEm: new Date()
             }

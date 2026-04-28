@@ -8,100 +8,112 @@ datasource db {
 }
 
 model Empresa {
-  id                  String   @id @default(uuid())
-  razaoSocial         String
-  nomeFantasia        String?
-  cnpj                String   @unique
-  cnae                String
-  cnaeDescricao       String?
-  grauRiscoNr4        Int
-  endereco            String?
-  municipio           String?
-  estado              String?
-  cep                 String?
-  telefone            String?
-  totalFuncionarios   Int
-  horarioTrabalho     String?
-  subdominio          String   @unique
-  
+  id                String  @id @default(uuid())
+  razaoSocial       String
+  nomeFantasia      String?
+  cnpj              String  @unique
+  cnae              String
+  cnaeDescricao     String?
+  grauRiscoNr4      Int
+  endereco          String?
+  municipio         String?
+  estado            String?
+  cep               String?
+  telefone          String?
+  totalFuncionarios Int
+  horarioTrabalho   String?
+  subdominio        String  @unique
+
   // Coleta
-  tokenColeta         String   @unique @default(uuid())
-  dataExpiracaoLink   DateTime
-  statusColeta        StatusColeta @default(ATIVA)
-  
+  tokenColeta       String       @unique @default(uuid())
+  dataExpiracaoLink DateTime
+  statusColeta      StatusColeta @default(ATIVA)
+
   // Responsabilidade técnica
-  engenheiroId        String
-  engenheiro          Engenheiro @relation(fields: [engenheiroId], references: [id])
-  empresaElaboradora  String?
-  
-  ghes                GHE[]
-  respostas           RespostaQuestionario[]
-  pgrs                PGR[]
-  
-  criadoEm            DateTime @default(now())
-  atualizadoEm        DateTime @updatedAt
+  engenheiroId       String
+  engenheiro         Engenheiro @relation(fields: [engenheiroId], references: [id])
+  empresaElaboradora String?
+
+  ghes      GHE[]
+  respostas RespostaQuestionario[]
+  pgrs      Pgr[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("empresas")
 }
 
 model GHE {
-  id            String   @id @default(uuid())
-  codigo        String   // "GHE 01", "GHE 02"
-  nome          String
-  descricao     String?
-  ambiente      Json?    // estrutura, cobertura, piso, etc.
-  cargos        Cargo[]
-  empresaId     String
-  empresa       Empresa  @relation(fields: [empresaId], references: [id])
-  respostas     RespostaQuestionario[]
+  id        String                 @id @default(uuid())
+  codigo    String // "GHE 01", "GHE 02"
+  nome      String
+  descricao String?
+  ambiente  Json? // estrutura, cobertura, piso, etc.
+  cargos    Cargo[]
+  empresaId String
+  empresa   Empresa                @relation(fields: [empresaId], references: [id])
+  respostas RespostaQuestionario[]
+
+  @@map("ghes")
 }
 
 model Cargo {
-  id              String  @id @default(uuid())
-  nome            String
-  cbo             String?
+  id                 String  @id @default(uuid())
+  nome               String
+  cbo                String?
   descricaoAtividade String?
-  quantidade      Int
-  qtdHomens       Int     @default(0)
-  qtdMulheres     Int     @default(0)
-  gheId           String
-  ghe             GHE     @relation(fields: [gheId], references: [id])
+  quantidade         Int
+  qtdHomens          Int     @default(0)
+  qtdMulheres        Int     @default(0)
+  gheId              String
+  ghe                GHE     @relation(fields: [gheId], references: [id])
+
+  @@map("cargos")
 }
 
 model RespostaQuestionario {
-  id              String   @id @default(uuid())
-  colaboradorId   String   // UUID anônimo, gerado no cliente
-  empresaId       String
-  empresa         Empresa  @relation(fields: [empresaId], references: [id])
-  gheId           String
-  ghe             GHE      @relation(fields: [gheId], references: [id])
-  cargo           String?
-  respostasRaw    Json     // perguntas e respostas brutas
-  analiseIA       Json?    // resultado do Prompt 2 (Gemini)
-  nivelDominante  String?  // TRIVIAL | MODERADO | SUBSTANCIAL | INTOLERÁVEL
-  processada      Boolean  @default(false)
-  criadaEm        DateTime @default(now())
+  id             String   @id @default(uuid())
+  colaboradorId  String // UUID anônimo, gerado no cliente
+  empresaId      String
+  empresa        Empresa  @relation(fields: [empresaId], references: [id])
+  gheId          String
+  ghe            GHE      @relation(fields: [gheId], references: [id])
+  cargo          String?
+  respostasRaw   Json // perguntas e respostas brutas
+  analiseIA      Json? // resultado do Prompt 2 (Gemini)
+  nivelDominante String? // TRIVIAL | MODERADO | SUBSTANCIAL | INTOLERÁVEL
+  processada     Boolean  @default(false)
+  criadaEm       DateTime @default(now())
+
+  @@map("respostas_questionarios")
 }
 
-model PGR {
-  id                    String   @id @default(uuid())
+model Pgr {
+  id                    String    @id @default(uuid())
   empresaId             String
-  empresa               Empresa  @relation(fields: [empresaId], references: [id])
-  jsonGerado            Json     // resultado completo do Prompt 3
+  empresa               Empresa   @relation(fields: [empresaId], references: [id])
+  jsonGerado            Json // resultado completo do Prompt 3
   caminhoDocx           String?
   caminhoPdf            String?
   status                StatusPGR @default(GERANDO)
   validadoPor           String?
   validadoEm            DateTime?
   observacoesEngenheiro String?
-  geradoEm              DateTime @default(now())
+  geradoEm              DateTime  @default(now())
+
+  @@map("pgrs")
 }
 
 model Engenheiro {
-  id          String    @id @default(uuid())
-  nome        String
-  email       String    @unique
-  crea        String?
-  contato     String?
-  empresas    Empresa[]
+  id       String    @id @default(uuid())
+  nome     String
+  email    String    @unique
+  crea     String?
+  contato  String?
+  empresas Empresa[]
+
+  @@map("engenheiros")
 }
 
 enum StatusColeta {
