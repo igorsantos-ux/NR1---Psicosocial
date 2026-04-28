@@ -1,26 +1,21 @@
-import 'dotenv/config';
-
-const dbUrl = process.env.DATABASE_URL;
-console.log('=== DEBUG DATABASE_URL ===');
-console.log('Definida?', !!dbUrl);
-console.log('Tamanho:', dbUrl?.length || 0);
-console.log('Protocolo:', dbUrl?.split('://')[0] || 'NENHUM');
-console.log('Primeiros 30 chars:', dbUrl?.substring(0, 30) || 'VAZIA');
-console.log('Todas as env vars começando com DATABASE:',
-  Object.keys(process.env).filter(k => k.startsWith('DATABASE'))
-);
-console.log('==========================');
-
-if (!dbUrl) {
-  console.error('FATAL: DATABASE_URL não está definida no ambiente.');
-  console.error('Verifique as variáveis de ambiente no Easypanel.');
-  process.exit(1);
+// Carregar variáveis de ambiente apenas em desenvolvimento
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
 }
 
-if (!dbUrl.startsWith('postgresql://') && !dbUrl.startsWith('postgres://')) {
-  console.error('FATAL: DATABASE_URL tem protocolo inválido.');
-  console.error('Valor atual começa com:', dbUrl.substring(0, 20));
-  console.error('Esperado: postgresql:// ou postgres://');
+const dbUrl = process.env.DATABASE_URL;
+
+// Debug temporário (será removido após validar Easypanel)
+if (process.env.NODE_ENV === 'production') {
+  console.log('=== PROD ENVIRONMENT CHECK ===');
+  console.log('DATABASE_URL defined?', !!dbUrl);
+  console.log('Length:', dbUrl?.length || 0);
+  console.log('Protocol:', dbUrl?.split('://')[0] || 'NONE');
+  console.log('==============================');
+}
+
+if (!dbUrl && process.env.NODE_ENV === 'production') {
+  console.error('FATAL: DATABASE_URL não está definida no ambiente de produção.');
   process.exit(1);
 }
 
