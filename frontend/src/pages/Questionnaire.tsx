@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/api';
 import Toast from '../components/Toast';
-import { ClipboardCheck, ArrowRight, ArrowLeft, CheckCircle2, Factory, Briefcase, AlertTriangle } from 'lucide-react';
+import { ClipboardCheck, ArrowRight, ArrowLeft, CheckCircle2, Factory, Briefcase, AlertTriangle, Clock } from 'lucide-react';
 
 // 15 Fatores de Risco Psicossocial conforme NR-01 Anexo I
 const CATEGORIES = [
@@ -33,7 +33,7 @@ const CATEGORIES = [
   {
     id: 'condicoes',
     title: 'Condições e Organização',
-    description: 'Avalie autonomia, reconhecimento e comunicação no trabalho.',
+    description: 'Avalie autonomia, recognition e comunicação no trabalho.',
     icon: '⚙️',
     questions: [
       { id: 'q09', text: 'Você sente falta de autonomia ou é submetido a microgestão constante?', factor: 'Falta de autonomia / microgestão' },
@@ -67,58 +67,50 @@ const SCALE_LABELS = [
 ];
 
 export default function Questionnaire() {
-  const { slug } = useParams();
-  const [company, setCompany] = useState<any>(null);
-  const [step, setStep] = useState(0); // 0=identificação, 1-4=categorias, 5=resultado
+  const { token } = useParams();
+  const [empresa, setEmpresa] = useState<any>(null);
+  const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
-    employeeName: '',
+    colaboradorId: `col-${Math.random().toString(36).substr(2, 9)}`,
     gheId: '',
-    employeeRole: '',
+    cargo: '',
     answers: {} as Record<string, number>,
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
-  const [error404, setError404] = useState(false);
+  const [status, setStatus] = useState<'LOADING' | 'ACTIVE' | 'EXPIRED' | 'ERROR'>('LOADING');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
 
   useEffect(() => {
     const fetchCompany = async () => {
       try {
-        const res = await api.get(`/companies/${slug}`);
-        setCompany(res.data);
-      } catch (err: any) {
-        if (err.response?.status === 404) {
-          setError404(true);
+        const res = await api.get(`/q/${token}`);
+        setEmpresa(res.data.empresa);
+        if (res.data.empresa.statusColeta === 'ATIVA') {
+          setStatus('ACTIVE');
         } else {
-          setToast({ show: true, message: 'Erro de conexão com o servidor.', type: 'error' });
+          setStatus('EXPIRED');
         }
+      } catch (err: any) {
+        setStatus('ERROR');
       }
     };
     fetchCompany();
-  }, [slug]);
+  }, [token]);
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // Formatar respostas com nomes dos fatores
-      const formattedAnswers: Record<string, any> = {};
-      ALL_QUESTIONS.forEach(q => {
-        formattedAnswers[q.factor] = {
-          score: formData.answers[q.id] || 0,
-          question: q.text,
-        };
-      });
-
-      const res = await api.post('/assessments', {
-        employeeName: formData.employeeName,
+      const res = await api.post(`/q/${token}/responder`, {
+        colaboradorId: formData.colaboradorId,
         gheId: formData.gheId,
-        employeeRole: formData.employeeRole,
-        answers: formattedAnswers,
+        cargo: formData.cargo,
+        respostasRaw: formData.answers,
       });
       setResult(res.data);
       setStep(TOTAL_STEPS - 1);
-    } catch (err) {
-      setToast({ show: true, message: 'Não foi possível enviar suas respostas agora. Tente novamente.', type: 'error' });
+    } catch (err: any) {
+      setToast({ show: true, message: err.response?.data?.message || 'Erro ao enviar respostas.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -137,22 +129,35 @@ export default function Questionnaire() {
   const totalQuestions = ALL_QUESTIONS.length;
   const progress = step === 0 ? 0 : Math.min((step / (TOTAL_STEPS - 1)) * 100, 100);
 
-  if (error404) {
+  if (status === 'ERROR') {
     return (
       <div className="min-h-screen bg-clinicfy-light p-8 flex flex-col items-center justify-center text-center">
         <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md border border-gray-100">
           <div className="bg-red-50 text-red-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Factory size={32} />
+            <AlertTriangle size={32} />
           </div>
-          <h2 className="text-2xl font-bold text-clinicfy-dark mb-2">Link Inválido</h2>
-          <p className="text-gray-500 mb-6">Não encontramos nenhuma empresa ativa com este endereço. Verifique se o link está correto.</p>
-          <button onClick={() => window.location.href = '/admin'} className="btn-primary w-full">Ir para o Início</button>
+          <h2 className="text-2xl font-bold text-clinicfy-dark mb-2">Página não Encontrada</h2>
+          <p className="text-gray-500 mb-6">O link que você acessou é inválido ou a empresa não está cadastrada no sistema.</p>
         </div>
       </div>
     );
   }
 
-  if (!company) return (
+  if (status === 'EXPIRED') {
+    return (
+      <div className="min-h-screen bg-clinicfy-light p-8 flex flex-col items-center justify-center text-center">
+        <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md border border-gray-100">
+          <div className="bg-orange-50 text-orange-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Clock size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-clinicfy-dark mb-2">Coleta Encerrada</h2>
+          <p className="text-gray-500 mb-6">O prazo para responder a este questionário expirou em <b>{empresa?.dataExpiracaoLink ? new Date(empresa.dataExpiracaoLink).toLocaleString('pt-BR') : ''}</b>. Entre em contato com o responsável da sua empresa.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'LOADING') return (
     <div className="min-h-screen bg-clinicfy-light p-8 flex flex-col items-center justify-center text-center">
       <div className="animate-pulse flex flex-col items-center">
         <div className="bg-clinicfy-teal/20 w-12 h-12 rounded-full mb-4"></div>
@@ -168,7 +173,7 @@ export default function Questionnaire() {
           <Factory size={24} />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-clinicfy-dark">{company.name}</h1>
+          <h1 className="text-xl font-bold text-clinicfy-dark">{empresa?.nomeFantasia || empresa?.razaoSocial}</h1>
           <p className="text-sm text-gray-500">Avaliação de Riscos Psicossociais — NR 01</p>
         </div>
       </header>
@@ -178,14 +183,14 @@ export default function Questionnaire() {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              {step === 0 ? 'Identificação' : step <= CATEGORIES.length ? `Seção ${step} de ${CATEGORIES.length}` : 'Concluído'}
+              {step === 0 ? 'Início' : step <= CATEGORIES.length ? `Seção ${step} de ${CATEGORIES.length}` : 'Concluído'}
             </span>
             <span className="text-[10px] font-bold text-clinicfy-teal">
               {answeredCount}/{totalQuestions} respondidas
             </span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2">
-            <div 
+            <div
               className="bg-gradient-to-r from-clinicfy-teal to-emerald-400 h-2 rounded-full transition-all duration-700 ease-out"
               style={{ width: `${progress}%` }}
             />
@@ -195,29 +200,19 @@ export default function Questionnaire() {
         {/* STEP 0: Identificação */}
         {step === 0 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-            <p className="text-gray-500 mb-6">Informe seus dados básicos para iniciar a avaliação.</p>
-            
+            <p className="text-gray-500 mb-6 text-sm">Responda com sinceridade. Sua participação é fundamental para a gestão da saúde na empresa. <b>O questionário é anônimo.</b></p>
+
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium mb-1 ml-1">Seu Nome Completo <span className="text-red-400">*</span></label>
-                <input
-                  type="text"
-                  placeholder="Informe seu nome"
-                  className="input-field"
-                  value={formData.employeeName}
-                  onChange={(e) => setFormData({ ...formData, employeeName: e.target.value })}
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium mb-1 ml-1">Seu Setor / GHE <span className="text-red-400">*</span></label>
-                <select 
+                <select
                   className="input-field appearance-none"
                   value={formData.gheId}
                   onChange={(e) => setFormData({ ...formData, gheId: e.target.value })}
                 >
-                  <option value="">Selecione um grupo...</option>
-                  {company.ghes.map((g: any) => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
+                  <option value="">Selecione seu setor...</option>
+                  {empresa?.ghes?.map((g: any) => (
+                    <option key={g.id} value={g.id}>{g.nome}</option>
                   ))}
                 </select>
               </div>
@@ -225,14 +220,14 @@ export default function Questionnaire() {
               <div>
                 <label className="block text-sm font-medium mb-1 ml-1 flex items-center gap-2">
                   <Briefcase size={14} className="text-gray-400" />
-                  Cargo (opcional)
+                  Seu Cargo <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: Auxiliar Administrativo, Operador de Máquinas..."
+                  placeholder="Ex: Auxiliar de Produção, Conferente..."
                   className="input-field"
-                  value={formData.employeeRole}
-                  onChange={(e) => setFormData({ ...formData, employeeRole: e.target.value })}
+                  value={formData.cargo}
+                  onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
                 />
               </div>
 
@@ -242,20 +237,19 @@ export default function Questionnaire() {
                   <div>
                     <p className="text-sm font-medium text-blue-800 mb-1">Sobre esta avaliação</p>
                     <p className="text-xs text-blue-600 leading-relaxed">
-                      Este questionário avalia 15 fatores de risco psicossocial conforme a NR-01 (atualização 2024). 
-                      As informações coletadas serão processadas por inteligência artificial para gerar 
-                      o Programa de Gerenciamento de Riscos (PGR) da empresa.
+                      Este questionário avalia fatores de risco psicossocial conforme a NR-01.
+                      Suas respostas serão consolidadas por GHE, garantindo o anonimato individual.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <button 
-                disabled={!formData.gheId || !formData.employeeName}
+              <button
+                disabled={!formData.gheId || !formData.cargo}
                 onClick={() => setStep(1)}
                 className="btn-secondary w-full mt-4 flex items-center justify-center gap-2 group disabled:opacity-50"
               >
-                Iniciar Avaliação <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                Iniciar Questionário <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
@@ -274,7 +268,7 @@ export default function Questionnaire() {
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-6">
               Responda de 1 (Nunca) a 5 (Sempre)
             </p>
-            
+
             <div className="space-y-6">
               {currentCategory.questions.map((q, qi) => (
                 <div key={q.id} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
@@ -286,15 +280,14 @@ export default function Questionnaire() {
                     {SCALE_LABELS.map((scale) => (
                       <button
                         key={scale.value}
-                        onClick={() => setFormData({ 
-                          ...formData, 
-                          answers: { ...formData.answers, [q.id]: scale.value } 
+                        onClick={() => setFormData({
+                          ...formData,
+                          answers: { ...formData.answers, [q.id]: scale.value }
                         })}
-                        className={`flex-1 min-w-[60px] py-2.5 px-1 rounded-xl border-2 text-center transition-all duration-200 ${
-                          formData.answers[q.id] === scale.value 
-                            ? `${scale.color} scale-105 shadow-md font-bold ring-2 ring-offset-1 ring-current/20` 
+                        className={`flex-1 min-w-[60px] py-2.5 px-1 rounded-xl border-2 text-center transition-all duration-200 ${formData.answers[q.id] === scale.value
+                            ? `${scale.color} scale-105 shadow-md font-bold ring-2 ring-offset-1 ring-current/20`
                             : 'border-gray-100 bg-white text-gray-400 hover:border-gray-200 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         <div className="text-lg font-bold leading-none mb-0.5">{scale.value}</div>
                         <div className="text-[9px] uppercase tracking-wider leading-none">{scale.label}</div>
@@ -303,19 +296,19 @@ export default function Questionnaire() {
                   </div>
                 </div>
               ))}
-              
+
               <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
-                <button 
-                  onClick={() => setStep(step - 1)} 
+                <button
+                  onClick={() => setStep(step - 1)}
                   className="flex-shrink-0 px-5 py-3 rounded-xl border border-gray-200 font-medium text-gray-500 hover:bg-gray-50 transition-colors flex items-center gap-2"
                 >
                   <ArrowLeft size={16} /> Voltar
                 </button>
-                
+
                 {isLastCategory ? (
-                  <button 
+                  <button
                     disabled={!isCategoryComplete() || loading}
-                    onClick={handleSubmit} 
+                    onClick={handleSubmit}
                     className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {loading ? (
@@ -331,7 +324,7 @@ export default function Questionnaire() {
                     )}
                   </button>
                 ) : (
-                  <button 
+                  <button
                     disabled={!isCategoryComplete()}
                     onClick={() => setStep(step + 1)}
                     className="btn-secondary flex-1 flex items-center justify-center gap-2 group disabled:opacity-50"
@@ -354,7 +347,7 @@ export default function Questionnaire() {
             <p className="text-gray-500 mb-8 max-w-md mx-auto">
               Sua avaliação psicossocial foi concluída com sucesso. Seus dados foram salvos e serão processados pelo engenheiro responsável na consolidação do PGR da empresa.
             </p>
-            
+
             {/* Removida análise individual imediata para economia de tokens */}
           </div>
         )}
@@ -366,11 +359,11 @@ export default function Questionnaire() {
         </p>
       </footer>
 
-      <Toast 
-        show={toast.show} 
-        message={toast.message} 
-        type={toast.type} 
-        onClose={() => setToast({ ...toast, show: false })} 
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, show: false })}
       />
     </div>
   );

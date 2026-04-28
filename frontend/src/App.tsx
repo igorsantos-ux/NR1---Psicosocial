@@ -7,6 +7,7 @@ import ActionPlans from './pages/ActionPlans';
 import GheManager from './pages/GheManager';
 import PgrReport from './pages/PgrReport';
 import Settings from './pages/Settings';
+import ValidatePGR from './pages/ValidatePGR';
 import './index.css';
 
 function App() {
@@ -14,8 +15,8 @@ function App() {
     <Router>
       <Routes>
         {/* Rota Pública do Questionário da Empresa */}
-        <Route path="/:slug/form" element={<Questionnaire />} />
-        
+        <Route path="/q/:token" element={<Questionnaire />} />
+
         {/* Rota do Dashboard Administrativo */}
         <Route path="/admin" element={<Dashboard />} />
         <Route path="/admin/companies" element={<RegisterCompany />} />
@@ -23,7 +24,10 @@ function App() {
         <Route path="/admin/ghes" element={<GheManager />} />
         <Route path="/admin/pgr" element={<PgrReport />} />
         <Route path="/admin/settings" element={<Settings />} />
-        
+
+        {/* Validação de PGR */}
+        <Route path="/pgr/:id/validar" element={<ValidatePGR />} />
+
         {/* Redirecionamento Padrão */}
         <Route path="/" element={<Navigate to="/admin/companies" />} />
       </Routes>

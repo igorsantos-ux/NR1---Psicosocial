@@ -3,92 +3,123 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model Company {
-  id                String       @id @default(uuid())
-  name              String
-  slug              String       @unique
-  cnpj              String       @unique
-  cnae              String?
-  cnaeDescricao     String?
-  riskLevel         Int?
-  endereco          String?
-  municipio         String?
-  estado            String?
-  cep               String?
-  telefone          String?
-  totalFuncionarios Int?
-  horarioTrabalho   String?
-  ghes              GHE[]
-  pgrReports        PgrReport[]
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+model Empresa {
+  id                  String   @id @default(uuid())
+  razaoSocial         String
+  nomeFantasia        String?
+  cnpj                String   @unique
+  cnae                String
+  cnaeDescricao       String?
+  grauRiscoNr4        Int
+  endereco            String?
+  municipio           String?
+  estado              String?
+  cep                 String?
+  telefone            String?
+  totalFuncionarios   Int
+  horarioTrabalho     String?
+  subdominio          String   @unique
+  
+  // Coleta
+  tokenColeta         String   @unique @default(uuid())
+  dataExpiracaoLink   DateTime
+  statusColeta        StatusColeta @default(ATIVA)
+  
+  // Responsabilidade técnica
+  engenheiroId        String
+  engenheiro          Engenheiro @relation(fields: [engenheiroId], references: [id])
+  empresaElaboradora  String?
+  
+  ghes                GHE[]
+  respostas           RespostaQuestionario[]
+  pgrs                PGR[]
+  
+  criadoEm            DateTime @default(now())
+  atualizadoEm        DateTime @updatedAt
 }
 
 model GHE {
-  id          String       @id @default(uuid())
-  name        String
-  description String?
-  companyId   String
-  company     Company      @relation(fields: [companyId], references: [id])
-  assessments Assessment[]
-  createdAt   DateTime     @default(now())
+  id            String   @id @default(uuid())
+  codigo        String   // "GHE 01", "GHE 02"
+  nome          String
+  descricao     String?
+  ambiente      Json?    // estrutura, cobertura, piso, etc.
+  cargos        Cargo[]
+  empresaId     String
+  empresa       Empresa  @relation(fields: [empresaId], references: [id])
+  respostas     RespostaQuestionario[]
 }
 
-model Assessment {
-  id              String      @id @default(uuid())
+model Cargo {
+  id              String  @id @default(uuid())
+  nome            String
+  cbo             String?
+  descricaoAtividade String?
+  quantidade      Int
+  qtdHomens       Int     @default(0)
+  qtdMulheres     Int     @default(0)
   gheId           String
-  ghe             GHE         @relation(fields: [gheId], references: [id])
-  employeeName    String?
-  employeeRole    String?
-  answers         Json        // Respostas do questionário (JSON)
-  aiRawResult     String?     // Resposta bruta da IA
-  aiProcessed     Boolean     @default(false)
-  riskMatrix      Json?       // Resultado da matriz AIHA (JSON)
-  actionPlan      ActionPlan?
-  status          String      @default("PENDING") // PENDING, ANALYZED, VALIDATED, REJECTED
-  engineerComment String?
-  createdAt       DateTime    @default(now())
+  ghe             GHE     @relation(fields: [gheId], references: [id])
 }
 
-model ActionPlan {
-  id           String     @id @default(uuid())
-  assessmentId String     @unique
-  assessment   Assessment @relation(fields: [assessmentId], references: [id])
-  items        Json       // Medidas de controle, responsáveis e cronograma (JSON)
-  status       String     @default("DRAFT") // DRAFT, VALIDATED
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+model RespostaQuestionario {
+  id              String   @id @default(uuid())
+  colaboradorId   String   // UUID anônimo, gerado no cliente
+  empresaId       String
+  empresa         Empresa  @relation(fields: [empresaId], references: [id])
+  gheId           String
+  ghe             GHE      @relation(fields: [gheId], references: [id])
+  cargo           String?
+  respostasRaw    Json     // perguntas e respostas brutas
+  analiseIA       Json?    // resultado do Prompt 2 (Gemini)
+  nivelDominante  String?  // TRIVIAL | MODERADO | SUBSTANCIAL | INTOLERÁVEL
+  processada      Boolean  @default(false)
+  criadaEm        DateTime @default(now())
 }
 
-model PgrReport {
-  id             String   @id @default(uuid())
-  companyId      String
-  company        Company  @relation(fields: [companyId], references: [id])
-  reportData     Json     // JSON completo retornado pelo Prompt 2
-  status         String   @default("DRAFT") // DRAFT, VALIDATED, EXPORTED
-  vigenciaInicio String?
-  vigenciaFim    String?
-  periodoColeta  String?
-  totalRespondentes Int?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model PGR {
+  id                    String   @id @default(uuid())
+  empresaId             String
+  empresa               Empresa  @relation(fields: [empresaId], references: [id])
+  jsonGerado            Json     // resultado completo do Prompt 3
+  caminhoDocx           String?
+  caminhoPdf            String?
+  status                StatusPGR @default(GERANDO)
+  validadoPor           String?
+  validadoEm            DateTime?
+  observacoesEngenheiro String?
+  geradoEm              DateTime @default(now())
 }
 
-model EngineerSettings {
-  id                 String @id @default(uuid())
-  engineerName       String @default("Denis Antônio")
-  engineerCrea       String @default("")
-  engineerContact    String @default("")
-  companyElaboradora String @default("")
+model Engenheiro {
+  id          String    @id @default(uuid())
+  nome        String
+  email       String    @unique
+  crea        String?
+  contato     String?
+  empresas    Empresa[]
+}
+
+enum StatusColeta {
+  ATIVA
+  EXPIRADA
+  ENCERRADA_MANUALMENTE
+}
+
+enum StatusPGR {
+  GERANDO
+  AGUARDANDO_VALIDACAO
+  VALIDADO
+  REPROVADO
 }
 
 model User {
   id       String @id @default(uuid())
   email    String @unique
-  password String // Para login fixo do Denis
+  password String
   role     String @default("ENGINEER")
 }

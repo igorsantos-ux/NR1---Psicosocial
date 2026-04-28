@@ -1,9 +1,16 @@
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
-# Instalar dependências necessárias para o Prisma/SQLite no Alpine
-RUN apk add --no-cache openssl
+# Instalar dependências necessárias para o Prisma, LibreOffice e fontes
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    libreoffice-common \
+    libreoffice-writer \
+    fonts-liberation \
+    libxml2 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -18,6 +25,9 @@ RUN npx prisma generate
 # Build do TypeScript
 RUN npm run build
 
+# Criar diretório de output
+RUN mkdir -p output
+
 EXPOSE 3001
 
-CMD ["node", "dist/index.js"]
+CMD ["npm", "run", "start"]

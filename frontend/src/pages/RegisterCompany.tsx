@@ -6,20 +6,24 @@ import Toast from '../components/Toast';
 
 export default function RegisterCompany() {
   const [formData, setFormData] = useState({
-    name: '',
+    razaoSocial: '',
+    nomeFantasia: '',
     cnpj: '',
     cnae: '',
     cnaeDescricao: '',
-    riskLevel: '1',
+    grauRiscoNr4: 1,
     endereco: '',
     municipio: '',
     estado: '',
     cep: '',
     telefone: '',
-    totalFuncionarios: '',
+    totalFuncionarios: 0,
     horarioTrabalho: '',
+    dataExpiracaoLink: '',
+    empresaElaboradora: 'PGR Smart Engenharia',
+    engenheiroId: 'fb098935-d227-4638-89c0-63ceba51532f' // ID fixo para desenvolvimento/Denis
   });
-  const [ghes, setGhes] = useState<string[]>([]);
+  const [ghes, setGhes] = useState<any[]>([]);
   const [newGhe, setNewGhe] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
@@ -27,8 +31,12 @@ export default function RegisterCompany() {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
 
   const handleAddGhe = () => {
-    if (newGhe.trim() && !ghes.includes(newGhe.trim())) {
-      setGhes([...ghes, newGhe.trim()]);
+    if (newGhe.trim() && !ghes.find(g => g.nome === newGhe.trim())) {
+      setGhes([...ghes, {
+        codigo: `GHE ${String(ghes.length + 1).padStart(2, '0')}`,
+        nome: newGhe.trim(),
+        cargos: [] // Inicialmente sem cargos, pode ser expandido
+      }]);
       setNewGhe('');
     }
   };
@@ -41,18 +49,20 @@ export default function RegisterCompany() {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await api.post('/companies', {
+      const response = await api.post('/empresas', {
         ...formData,
+        totalFuncionarios: Number(formData.totalFuncionarios),
+        grauRiscoNr4: Number(formData.grauRiscoNr4),
         ghes
       });
-      
-      const slug = response.data.slug;
-      const url = `${window.location.origin}/${slug}/form`;
+
+      const token = response.data.empresa.tokenColeta;
+      const url = `${window.location.origin}/q/${token}`;
       setGeneratedLink(url);
       setToast({ show: true, message: 'Empresa cadastrada com sucesso!', type: 'success' });
     } catch (error: any) {
       console.error(error);
-      const errorMsg = error.response?.data?.error || 'Erro ao cadastrar empresa. Verifique os dados.';
+      const errorMsg = error.response?.data?.message || 'Erro ao cadastrar empresa. Verifique os dados.';
       setToast({ show: true, message: errorMsg, type: 'error' });
     } finally {
       setLoading(false);
@@ -65,7 +75,12 @@ export default function RegisterCompany() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+  const shareWhatsApp = () => {
+    const text = encodeURIComponent(`Olá! Por favor, responda ao questionário psicossocial da empresa ${formData.nomeFantasia || formData.razaoSocial} através do link: ${generatedLink}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  const ESTADOS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 
   return (
     <Layout>
@@ -78,7 +93,7 @@ export default function RegisterCompany() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
-              
+
               {/* Bloco 1 - Dados Básicos */}
               <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
@@ -94,10 +109,21 @@ export default function RegisterCompany() {
                         type="text"
                         placeholder="Ex: Maravilha Linguiças Ltda."
                         className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinicfy-teal/20 transition-all"
-                        value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        value={formData.razaoSocial}
+                        onChange={e => setFormData({ ...formData, razaoSocial: e.target.value })}
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nome Fantasia</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Maravilha Linguiças"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinicfy-teal/20 transition-all"
+                      value={formData.nomeFantasia}
+                      onChange={e => setFormData({ ...formData, nomeFantasia: e.target.value })}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -146,8 +172,8 @@ export default function RegisterCompany() {
                       <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                       <select
                         className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinicfy-teal/20 appearance-none transition-all"
-                        value={formData.riskLevel}
-                        onChange={e => setFormData({ ...formData, riskLevel: e.target.value })}
+                        value={formData.grauRiscoNr4}
+                        onChange={e => setFormData({ ...formData, grauRiscoNr4: Number(e.target.value) })}
                       >
                         <option value="1">Grau 1</option>
                         <option value="2">Grau 2</option>
@@ -166,7 +192,21 @@ export default function RegisterCompany() {
                         placeholder="Ex: 45"
                         className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinicfy-teal/20 transition-all"
                         value={formData.totalFuncionarios}
-                        onChange={e => setFormData({ ...formData, totalFuncionarios: e.target.value })}
+                        onChange={e => setFormData({ ...formData, totalFuncionarios: Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 text-clinicfy-teal font-bold">Expiração do Link</label>
+                    <div className="relative">
+                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-clinicfy-teal" size={18} />
+                      <input
+                        required
+                        type="datetime-local"
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-clinicfy-teal/20 bg-clinicfy-teal/5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinicfy-teal/20 transition-all"
+                        value={formData.dataExpiracaoLink}
+                        onChange={e => setFormData({ ...formData, dataExpiracaoLink: e.target.value })}
                       />
                     </div>
                   </div>
@@ -254,6 +294,16 @@ export default function RegisterCompany() {
                       />
                     </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Empresa Elaboradora</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinicfy-teal/20 transition-all"
+                      value={formData.empresaElaboradora}
+                      onChange={e => setFormData({ ...formData, empresaElaboradora: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -265,7 +315,7 @@ export default function RegisterCompany() {
                   </h3>
                   <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold uppercase">{ghes.length} adicionados</span>
                 </div>
-                
+
                 <div className="flex gap-2 mb-4">
                   <input
                     type="text"
@@ -288,8 +338,8 @@ export default function RegisterCompany() {
                   {ghes.map((ghe, index) => (
                     <div key={index} className="flex items-center gap-2 px-3 py-1.5 bg-clinicfy-teal/5 text-clinicfy-teal rounded-lg border border-clinicfy-teal/10 text-xs font-semibold group">
                       {ghe}
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => removeGhe(index)}
                         className="text-gray-400 hover:text-red-500 transition-colors"
                       >
@@ -305,11 +355,10 @@ export default function RegisterCompany() {
 
               <button
                 disabled={loading || ghes.length === 0}
-                className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
-                  loading || ghes.length === 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-clinicfy-pink text-white shadow-lg shadow-clinicfy-pink/20 hover:scale-[1.01] active:scale-[0.99]'
-                }`}
+                className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${loading || ghes.length === 0
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-clinicfy-pink text-white shadow-lg shadow-clinicfy-pink/20 hover:scale-[1.01] active:scale-[0.99]'
+                  }`}
               >
                 {loading ? 'Cadastrando...' : 'CADASTRAR EMPRESA E GERAR LINK'}
               </button>
@@ -347,6 +396,13 @@ export default function RegisterCompany() {
                       </>
                     )}
                   </button>
+                  <button
+                    onClick={shareWhatsApp}
+                    className="w-full py-3 rounded-xl bg-[#25D366] text-white font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                  >
+                    <Phone size={16} />
+                    COMPARTILHAR WHATSAPP
+                  </button>
                 </div>
               ) : (
                 <div className="py-8 text-center border-2 border-dashed border-white/20 rounded-2xl">
@@ -379,11 +435,11 @@ export default function RegisterCompany() {
           </div>
         </div>
       </div>
-      <Toast 
-        show={toast.show} 
-        message={toast.message} 
-        type={toast.type} 
-        onClose={() => setToast({ ...toast, show: false })} 
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, show: false })}
       />
     </Layout>
   );

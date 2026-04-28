@@ -1,28 +1,44 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { PrismaClient } from '@prisma/client';
-import apiRoutes from './routes/api.routes';
+import dotenv from 'dotenv';
+import { empresaRoutes } from './routes/empresa.routes';
+import { coletaRoutes } from './routes/coleta.routes';
+import { pgrRoutes } from './routes/pgr.routes';
+import { setupCrons } from './crons/expirarColetas';
 
 dotenv.config();
 
-const app = express();
+const fastify = Fastify({ logger: true });
 const prisma = new PrismaClient();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
-app.use(cors());
-app.use(express.json());
+// Registrar Plugins
+fastify.register(cors, { origin: '*' });
 
-// Rotas da API
-app.use('/api', apiRoutes);
+// Registrar Rotas
+fastify.register(empresaRoutes, { prefix: '/api/empresas' });
+fastify.register(coletaRoutes, { prefix: '/api/q' });
+fastify.register(pgrRoutes, { prefix: '/api/pgr' });
 
-// Rota de Health Check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Engine PGR NR 01 rodando' });
+// Inicializar Crons
+setupCrons();
+
+// Health Check
+fastify.get('/health', async () => {
+  return { status: 'OK', message: 'Engine PGR NR 01 rodando' };
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend PGR rodando na porta ${PORT}`);
-});
+const start = async () => {
+  try {
+    await fastify.listen({ port: PORT, host: '0.0.0.0' });
+    console.log(`Backend Fastify rodando na porta ${PORT}`);
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
 
-export { prisma };
+start();
+
+export { prisma, fastify };
