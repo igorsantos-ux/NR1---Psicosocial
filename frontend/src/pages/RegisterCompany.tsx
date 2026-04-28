@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import Layout from '../components/Layout';
-import { Building2, FileText, Hash, Layers, Plus, Trash2, Link as LinkIcon, Copy, CheckCircle2, MapPin, Phone, Users, Clock } from 'lucide-react';
+import { Building2, FileText, Hash, Layers, Plus, Trash2, Link as LinkIcon, Copy, CheckCircle2, MapPin, Phone, Users, Clock, Briefcase } from 'lucide-react';
 import api from '../api/api';
 import Toast from '../components/Toast';
+
+interface GHE {
+  id: string;
+  nome: string;
+  codigo?: string;
+  cargos?: string[];
+}
 
 export default function RegisterCompany() {
   const [formData, setFormData] = useState({
@@ -23,37 +31,62 @@ export default function RegisterCompany() {
     empresaElaboradora: 'PGR Smart Engenharia',
     engenheiroId: 'fb098935-d227-4638-89c0-63ceba51532f' // ID fixo para desenvolvimento/Denis
   });
-  const [ghes, setGhes] = useState<any[]>([]);
-  const [newGhe, setNewGhe] = useState('');
+
+  const [ghes, setGhes] = useState<GHE[]>([]);
+  const [newGheNome, setNewGheNome] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
 
   const handleAddGhe = () => {
-    if (newGhe.trim() && !ghes.find(g => g.nome === newGhe.trim())) {
-      setGhes([...ghes, {
-        codigo: `GHE ${String(ghes.length + 1).padStart(2, '0')}`,
-        nome: newGhe.trim(),
-        cargos: [] // Inicialmente sem cargos, pode ser expandido
-      }]);
-      setNewGhe('');
+    const nome = newGheNome.trim();
+    if (!nome) return;
+
+    // Evita duplicatas
+    if (ghes.some(g => g.nome.toLowerCase() === nome.toLowerCase())) {
+      setToast({ show: true, message: 'Este GHE já foi adicionado.', type: 'error' });
+      return;
     }
+
+    const novoGhe: GHE = {
+      id: uuidv4(),
+      nome,
+      codigo: `GHE ${String(ghes.length + 1).padStart(2, '0')}`,
+      cargos: []
+    };
+
+    setGhes(prev => [...prev, novoGhe]);
+    setNewGheNome('');
   };
 
-  const removeGhe = (index: number) => {
-    setGhes(ghes.filter((_, i) => i !== index));
+  const removeGhe = (id: string) => {
+    setGhes(prev => prev.filter(g => g.id !== id));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddGhe();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
+      // O backend espera o formato { nome, codigo, cargos } para os GHEs
+      const ghesPayload = ghes.map(g => ({
+        nome: g.nome,
+        codigo: g.codigo,
+        cargos: g.cargos
+      }));
+
       const response = await api.post('/empresas', {
         ...formData,
         totalFuncionarios: Number(formData.totalFuncionarios),
         grauRiscoNr4: Number(formData.grauRiscoNr4),
-        ghes
+        ghes: ghesPayload
       });
 
       const token = response.data.empresa.tokenColeta;
@@ -320,115 +353,126 @@ export default function RegisterCompany() {
                   <input
                     type="text"
                     placeholder="Adicionar nome do GHE..."
-                    className="flex-1 px-4 py-2 text-sm rounded-xl border border-gray-100 bg-gray-50 focus:bg-white outline-none"
-                    value={newGhe}
-                    onChange={e => setNewGhe(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddGhe())}
+                    className="flex-1 px-4 py-3 rounded-xl bg-gray-50 border-0 focus:ring-2 focus:ring-clinicfy-teal transition-all outline-none text-sm"
+                    value={newGheNome}
+                    onChange={e => setNewGheNome(e.target.value)}
+                    onKeyDown={handleKeyDown}
                   />
                   <button
                     type="button"
                     onClick={handleAddGhe}
-                    className="p-2 rounded-xl bg-clinicfy-teal text-white hover:opacity-90 transition-opacity"
+                    disabled={!newGheNome.trim()}
+                    className="w-12 h-12 rounded-xl bg-clinicfy-teal text-white hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center shadow-lg shadow-clinicfy-teal/20"
                   >
                     <Plus size={20} />
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {ghes.map((ghe, index) => (
-                    <div key={index} className="flex items-center gap-2 px-3 py-1.5 bg-clinicfy-teal/5 text-clinicfy-teal rounded-lg border border-clinicfy-teal/10 text-xs font-semibold group">
-                      {ghe}
+                <div className="space-y-2">
+                  {ghes.map((ghe) => (
+                    <div key={ghe.id} className="flex items-center justify-between px-4 py-3 bg-clinicfy-teal/5 text-clinicfy-teal rounded-2xl border border-clinicfy-teal/10 group animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-clinicfy-teal/10 rounded-lg flex items-center justify-center text-[10px]">
+                          <Briefcase size={14} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-clinicfy-dark">{ghe.nome}</p>
+                          <p className="text-[9px] text-gray-400 uppercase tracking-widest">{ghe.codigo}</p>
+                        </div>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => removeGhe(index)}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        onClick={() => removeGhe(ghe.id)}
+                        className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   ))}
                   {ghes.length === 0 && (
-                    <p className="text-xs text-gray-400 italic py-2">Adicione ao menos um GHE para continuar.</p>
+                    <p className="text-xs text-gray-400 italic py-4 text-center border-2 border-dashed border-gray-50 rounded-2xl">
+                      Adicione ao menos um GHE para continuar.
+                    </p>
                   )}
                 </div>
               </div>
 
               <button
                 disabled={loading || ghes.length === 0}
-                className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${loading || ghes.length === 0
+                className={`w-full py-5 rounded-3xl font-bold flex items-center justify-center gap-2 transition-all ${loading || ghes.length === 0
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-clinicfy-pink text-white shadow-lg shadow-clinicfy-pink/20 hover:scale-[1.01] active:scale-[0.99]'
+                  : 'bg-clinicfy-pink text-white shadow-xl shadow-clinicfy-pink/20 hover:scale-[1.01] active:scale-[0.99]'
                   }`}
               >
-                {loading ? 'Cadastrando...' : 'CADASTRAR EMPRESA E GERAR LINK'}
+                {loading ? 'Processando...' : 'CADASTRAR EMPRESA E GERAR LINK'}
               </button>
             </form>
           </div>
 
           <div className="space-y-6">
-            <div className={`bg-gradient-to-br from-clinicfy-teal to-clinicfy-dark p-6 rounded-3xl text-white shadow-xl transition-all duration-500 ${generatedLink ? 'opacity-100 translate-y-0' : 'opacity-50 blur-[2px]'}`}>
-              <div className="bg-white/20 p-2 rounded-xl w-fit mb-4">
-                <LinkIcon size={24} />
+            <div className={`bg-gradient-to-br from-clinicfy-teal to-clinicfy-dark p-8 rounded-[40px] text-white shadow-2xl transition-all duration-500 ${generatedLink ? 'opacity-100 translate-y-0' : 'opacity-50 blur-[2px]'}`}>
+              <div className="bg-white/20 p-3 rounded-2xl w-fit mb-6">
+                <LinkIcon size={28} />
               </div>
-              <h3 className="font-bold text-lg mb-2">Link Gerado</h3>
-              <p className="text-white/70 text-xs mb-6 leading-relaxed">
-                Este é o link público que os funcionários utilizarão para responder ao questionário psicossocial.
+              <h3 className="font-bold text-xl mb-3">Link Gerado</h3>
+              <p className="text-white/70 text-sm mb-8 leading-relaxed">
+                Este é o link público que os funcionários utilizarão para responder ao questionário psicossocial de forma anônima.
               </p>
 
               {generatedLink ? (
                 <div className="space-y-4">
-                  <div className="bg-white/10 rounded-xl p-3 break-all text-[11px] font-mono border border-white/20">
+                  <div className="bg-white/10 rounded-2xl p-4 break-all text-[11px] font-mono border border-white/20 leading-relaxed">
                     {generatedLink}
                   </div>
                   <button
                     onClick={copyToClipboard}
-                    className="w-full py-3 rounded-xl bg-white text-clinicfy-dark font-bold text-xs flex items-center justify-center gap-2 hover:bg-clinicfy-light transition-colors"
+                    className="w-full py-4 rounded-2xl bg-white text-clinicfy-dark font-bold text-sm flex items-center justify-center gap-2 hover:bg-clinicfy-light transition-all active:scale-95"
                   >
                     {copied ? (
                       <>
-                        <CheckCircle2 size={16} className="text-green-500" />
-                        COPIADO!
+                        <CheckCircle2 size={18} className="text-green-500" />
+                        COPIADO COM SUCESSO!
                       </>
                     ) : (
                       <>
-                        <Copy size={16} />
+                        <Copy size={18} />
                         COPIAR LINK
                       </>
                     )}
                   </button>
                   <button
                     onClick={shareWhatsApp}
-                    className="w-full py-3 rounded-xl bg-[#25D366] text-white font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                    className="w-full py-4 rounded-2xl bg-[#25D366] text-white font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95"
                   >
-                    <Phone size={16} />
+                    <Phone size={18} />
                     COMPARTILHAR WHATSAPP
                   </button>
                 </div>
               ) : (
-                <div className="py-8 text-center border-2 border-dashed border-white/20 rounded-2xl">
+                <div className="py-12 text-center border-2 border-dashed border-white/20 rounded-3xl">
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">Aguardando Cadastro</p>
                 </div>
               )}
             </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-              <h4 className="text-xs font-bold text-gray-400 uppercase mb-4">Instruções</h4>
-              <ul className="space-y-3">
-                <li className="flex gap-3 text-xs text-gray-600">
-                  <div className="w-5 h-5 rounded-full bg-clinicfy-teal/10 text-clinicfy-teal flex items-center justify-center font-bold flex-shrink-0">1</div>
-                  <span>Preencha os dados cadastrais completos para o PGR.</span>
+            <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+              <h4 className="text-xs font-bold text-gray-400 uppercase mb-6 tracking-widest">Próximos Passos</h4>
+              <ul className="space-y-4">
+                <li className="flex gap-4 text-xs text-gray-600 leading-relaxed">
+                  <div className="w-6 h-6 rounded-xl bg-clinicfy-teal/10 text-clinicfy-teal flex items-center justify-center font-bold flex-shrink-0">1</div>
+                  <span>Envie o link para todos os funcionários via WhatsApp ou e-mail.</span>
                 </li>
-                <li className="flex gap-3 text-xs text-gray-600">
-                  <div className="w-5 h-5 rounded-full bg-clinicfy-teal/10 text-clinicfy-teal flex items-center justify-center font-bold flex-shrink-0">2</div>
-                  <span>Adicione todos os GHEs que participarão da coleta.</span>
+                <li className="flex gap-4 text-xs text-gray-600 leading-relaxed">
+                  <div className="w-6 h-6 rounded-xl bg-clinicfy-teal/10 text-clinicfy-teal flex items-center justify-center font-bold flex-shrink-0">2</div>
+                  <span>Acompanhe o status das respostas em tempo real no Dashboard.</span>
                 </li>
-                <li className="flex gap-3 text-xs text-gray-600">
-                  <div className="w-5 h-5 rounded-full bg-clinicfy-teal/10 text-clinicfy-teal flex items-center justify-center font-bold flex-shrink-0">3</div>
-                  <span>Envie o link para os funcionários via WhatsApp.</span>
+                <li className="flex gap-4 text-xs text-gray-600 leading-relaxed">
+                  <div className="w-6 h-6 rounded-xl bg-clinicfy-teal/10 text-clinicfy-teal flex items-center justify-center font-bold flex-shrink-0">3</div>
+                  <span>Após o prazo de expiração, o PGR será gerado automaticamente pela IA.</span>
                 </li>
-                <li className="flex gap-3 text-xs text-gray-600">
-                  <div className="w-5 h-5 rounded-full bg-clinicfy-teal/10 text-clinicfy-teal flex items-center justify-center font-bold flex-shrink-0">4</div>
-                  <span>Após coleta, gere o PGR consolidado na aba "Relatório PGR".</span>
+                <li className="flex gap-4 text-xs text-gray-600 leading-relaxed">
+                  <div className="w-6 h-6 rounded-xl bg-clinicfy-teal/10 text-clinicfy-teal flex items-center justify-center font-bold flex-shrink-0">4</div>
+                  <span>Acesse o "Painel de Revisão" para validar e baixar o PDF final.</span>
                 </li>
               </ul>
             </div>
