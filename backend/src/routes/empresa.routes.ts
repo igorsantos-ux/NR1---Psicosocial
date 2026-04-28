@@ -19,7 +19,7 @@ const empresaSchema = z.object({
     telefone: z.string().optional(),
     totalFuncionarios: z.number(),
     horarioTrabalho: z.string().optional(),
-    dataExpiracaoLink: z.string().datetime(),
+    dataExpiracaoLink: z.coerce.date(),
     engenheiroId: z.string(),
     empresaElaboradora: z.string().optional(),
     ghes: z.array(z.object({
@@ -60,7 +60,7 @@ export async function empresaRoutes(fastify: FastifyInstance) {
                     telefone: data.telefone ?? null,
                     totalFuncionarios: data.totalFuncionarios,
                     horarioTrabalho: data.horarioTrabalho ?? null,
-                    dataExpiracaoLink: new Date(data.dataExpiracaoLink),
+                    dataExpiracaoLink: data.dataExpiracaoLink,
                     subdominio,
                     engenheiroId: data.engenheiroId,
                     empresaElaboradora: data.empresaElaboradora ?? null,

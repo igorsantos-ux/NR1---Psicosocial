@@ -30,6 +30,19 @@ fastify.register(empresaRoutes, { prefix: '/api/empresas' });
 fastify.register(coletaRoutes, { prefix: '/api/q' });
 fastify.register(pgrRoutes, { prefix: '/api/pgr' });
 
+// Global Error Handler para tratar erros do Zod
+fastify.setErrorHandler((error, request, reply) => {
+  if (error.name === 'ZodError') {
+    return reply.status(400).send({
+      message: 'Erro de validação nos dados enviados.',
+      errors: JSON.parse(error.message)
+    });
+  }
+  
+  fastify.log.error(error);
+  reply.status(500).send({ message: 'Erro interno do servidor' });
+});
+
 // Inicializar Crons
 setupCrons();
 

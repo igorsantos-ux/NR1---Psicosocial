@@ -86,6 +86,7 @@ export default function RegisterCompany() {
         ...formData,
         totalFuncionarios: Number(formData.totalFuncionarios),
         grauRiscoNr4: Number(formData.grauRiscoNr4),
+        dataExpiracaoLink: formData.dataExpiracaoLink ? new Date(formData.dataExpiracaoLink).toISOString() : null,
         ghes: ghesPayload
       });
 
