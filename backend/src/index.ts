@@ -31,7 +31,7 @@ fastify.register(coletaRoutes, { prefix: '/api/q' });
 fastify.register(pgrRoutes, { prefix: '/api/pgr' });
 
 // Global Error Handler para tratar erros do Zod
-fastify.setErrorHandler((error, request, reply) => {
+fastify.setErrorHandler((error: any, request, reply) => {
   if (error.name === 'ZodError') {
     return reply.status(400).send({
       message: 'Erro de validação nos dados enviados.',
