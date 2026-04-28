@@ -5,15 +5,6 @@ if (process.env.NODE_ENV !== 'production') {
 
 const dbUrl = process.env.DATABASE_URL;
 
-// Debug temporário (será removido após validar Easypanel)
-if (process.env.NODE_ENV === 'production') {
-  console.log('=== PROD ENVIRONMENT CHECK ===');
-  console.log('DATABASE_URL defined?', !!dbUrl);
-  console.log('Length:', dbUrl?.length || 0);
-  console.log('Protocol:', dbUrl?.split('://')[0] || 'NONE');
-  console.log('==============================');
-}
-
 if (!dbUrl && process.env.NODE_ENV === 'production') {
   console.error('FATAL: DATABASE_URL não está definida no ambiente de produção.');
   process.exit(1);
