@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "npx prisma migrate deploy && node dist/index.js",
+    "start": "node -e 'const d=process.env.DATABASE_URL; console.log(\"=== ENV TRACE ===\"); console.log(\"DB_URL_VAL:\", d ? \"[\"+d.substring(0,15)+\"...]\" : \"NULL/UNDEFINED\"); console.log(\"Length:\", d?.length); console.log(\"Type:\", typeof d); console.log(\"HEX:\", d ? Buffer.from(d.substring(0,5)).toString(\"hex\") : \"N/A\"); console.log(\"==================\")' && npx prisma migrate deploy && node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },
