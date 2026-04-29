@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   ArrowLeft, Building2, MapPin, Phone, Users, Clock, Hash, 
   ExternalLink, Copy, Share2, Mail, Zap, CheckCircle2, 
-  FileDown, Calendar, AlertCircle, RefreshCw, Layers, Edit3
+  FileDown, Calendar, AlertCircle, RefreshCw, Layers, Edit3, History as HistoryIcon
 } from 'lucide-react';
 import Layout from '../../../components/Layout';
 import api from '../../../api/api';
@@ -262,7 +262,7 @@ export default function DetalhesEmpresa() {
             {/* Histórico */}
             <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <History size={14} className="text-clinicfy-teal" /> Histórico de Atividades
+                <HistoryIcon size={14} className="text-clinicfy-teal" /> Histórico de Atividades
               </h3>
               <TimelineAtividades atividades={empresa.respostas || []} />
             </div>

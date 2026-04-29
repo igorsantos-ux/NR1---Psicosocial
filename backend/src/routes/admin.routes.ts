@@ -14,7 +14,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
 
         const ativas = empresas.filter(e => e.statusColeta === 'ATIVA' && e.dataExpiracaoLink > agora).length;
         const expiradas = empresas.filter(e => (e.statusColeta === 'ATIVA' && e.dataExpiracaoLink <= agora) || e.statusColeta === 'EXPIRADA').length;
-        const finalizadas = empresas.filter(e => e.pgrs.length > 0 && e.pgrs[0].status === 'VALIDADO').length;
+        const finalizadas = empresas.filter(e => e.pgrs.length > 0 && e.pgrs[0]?.status === 'VALIDADO').length;
 
         return { ativas, expiradas, finalizadas };
     });
@@ -50,7 +50,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
             }
             
             const ultimoPgr = e.pgrs[0];
-            let statusGeral = statusCalculado; // Fallback
+            let statusGeral: string = statusCalculado; // Tipado como string para aceitar estados do PGR
             
             if (ultimoPgr) {
                 if (ultimoPgr.status === 'GERANDO') statusGeral = 'GERANDO';
