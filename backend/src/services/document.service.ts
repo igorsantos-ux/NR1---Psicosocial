@@ -76,8 +76,8 @@ export class DocumentService {
                 documento: {
                     data_emissao_formatada: `${meses[dataAtual.getMonth()]}/${dataAtual.getFullYear()}`,
                     data_validade_formatada: `${meses[dataValidade.getMonth()]}/${dataValidade.getFullYear()}`,
-                    data_emissao_extenso: `${dataAtual.getDate()} de ${meses[dataAtual.getMonth()].toLowerCase()} de ${dataAtual.getFullYear()}`,
-                    vigencia: `${meses[dataAtual.getMonth()]} DE ${dataAtual.getFullYear()} À ${meses[dataValidade.getMonth()]} DE ${dataValidade.getFullYear()}`
+                    data_emissao_extenso: `${dataAtual.getDate()} de ${(meses[dataAtual.getMonth()] || '').toLowerCase()} de ${dataAtual.getFullYear()}`,
+                    vigencia: `${meses[dataAtual.getMonth()] || ''} DE ${dataAtual.getFullYear()} À ${meses[dataValidade.getMonth()] || ''} DE ${dataValidade.getFullYear()}`
                 },
                 
                 engenheiro: {

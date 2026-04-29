@@ -16,7 +16,7 @@ function auditTemplate() {
 
     // Regex para encontrar {placeholder} ou {#loop} ou {/loop} ou {^nested}
     const placeholdersEncontrados = [...new Set(
-        [...xml.matchAll(/\{([#/^]?[^}]+)\}/g)].map(m => m[1].trim())
+        [...xml.matchAll(/\{([#/^]?[^}]+)\}/g)].map(m => (m[1] || '').trim())
     )].sort();
 
     console.log('--- PLACEHOLDERS ENCONTRADOS NO TEMPLATE ---');
