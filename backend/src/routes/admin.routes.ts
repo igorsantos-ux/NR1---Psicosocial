@@ -19,39 +19,6 @@ export async function adminRoutes(fastify: FastifyInstance) {
         return { ativas, expiradas, finalizadas };
     });
 
-    // Rotas legadas/compatibilidade que o dashboard já usava
-    fastify.get('/assessments', async () => {
-        const respostas = await prisma.respostaQuestionario.findMany({
-            include: {
-                empresa: { select: { nomeFantasia: true, razaoSocial: true } },
-                ghe: { select: { nome: true } }
-            },
-            orderBy: { criadaEm: 'desc' }
-        });
-        return respostas.map(r => ({ ...r, status: r.processada ? 'VALIDATED' : 'PENDING' }));
-    });
-
-    fastify.get('/companies', async () => {
-        return await prisma.empresa.findMany({
-            include: { _count: { select: { respostas: true } } },
-            orderBy: { criadoEm: 'desc' }
-        });
-    });
-
-    fastify.get('/ghes', async () => {
-        return await prisma.gHE.findMany({
-            include: {
-                empresa: { select: { nomeFantasia: true, razaoSocial: true } },
-                cargos: true
-            }
-        });
-    });
-
-    fastify.get('/engineer', async () => {
-        return await prisma.engenheiro.findFirst();
-    });
-}
-
     // PATCH /api/empresas/:id/estender-prazo
     fastify.patch('/empresas/:id/estender-prazo', async (request, reply) => {
         const { id } = request.params as { id: string };
@@ -95,6 +62,15 @@ export async function adminRoutes(fastify: FastifyInstance) {
         return await prisma.empresa.findMany({
             include: { _count: { select: { respostas: true } } },
             orderBy: { criadoEm: 'desc' }
+        });
+    });
+
+    fastify.get('/ghes', async () => {
+        return await prisma.gHE.findMany({
+            include: {
+                empresa: { select: { nomeFantasia: true, razaoSocial: true } },
+                cargos: true
+            }
         });
     });
 
