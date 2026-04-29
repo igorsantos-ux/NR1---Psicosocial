@@ -5,7 +5,7 @@ import { CONSOLIDATED_PROMPT } from './prompts/consolidatedPrompt.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface AnaliseIndividualJSON {
     colaborador_id: string;
@@ -55,19 +55,20 @@ export class GeminiService {
         const maxRetries = 3;
         let attempt = 0;
 
+        // Na v1, mesclamos a instrução de sistema no prompt
+        const fullPrompt = `${systemInstruction}\n\nRESPOSTA ESPERADA EM JSON:\n${prompt}`;
+
         while (attempt < maxRetries) {
             try {
-                console.log(`[Gemini] Chamando API: ${GEMINI_URL.replace(GEMINI_API_KEY, '***')}`);
+                console.log(`[Gemini] Chamando API v1: ${GEMINI_URL.replace(GEMINI_API_KEY, '***')}`);
                 const response = await fetch(GEMINI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { parts: [{ text: systemInstruction }] },
+                        contents: [{ parts: [{ text: fullPrompt }] }],
                         generationConfig: {
                             temperature,
-                            maxOutputTokens: maxTokens,
-                            responseMimeType: "application/json"
+                            maxOutputTokens: maxTokens
                         }
                     })
                 });
@@ -79,7 +80,10 @@ export class GeminiService {
                 }
 
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                return JSON.parse(text);
+                
+                // Limpeza de Markdown se necessário
+                const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                return JSON.parse(cleanJson);
             } catch (error: any) {
                 attempt++;
                 if (attempt >= maxRetries) throw error;
