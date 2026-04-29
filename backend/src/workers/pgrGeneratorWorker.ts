@@ -136,11 +136,14 @@ export async function processarGeracaoPGR(pgrId: string) {
         log('💾 Arquivos salvos', { docxPath, pdfPath });
 
         // 7. Atualizar status para AGUARDANDO_VALIDACAO
+        const relativeDocxPath = `${empresa.id}/${pgrId}/pgr.docx`;
+        const relativePdfPath = `${empresa.id}/${pgrId}/pgr.pdf`;
+
         await prisma.pgr.update({
             where: { id: pgrId },
             data: {
-                caminhoDocx: docxPath,
-                caminhoPdf: pdfPath,
+                caminhoDocx: relativeDocxPath,
+                caminhoPdf: relativePdfPath,
                 status: 'AGUARDANDO_VALIDACAO'
             }
         });

@@ -12,6 +12,8 @@ if (!dbUrl && process.env.NODE_ENV === 'production') {
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
+import path from 'path';
 import { PrismaClient } from '@prisma/client';
 import { empresaRoutes } from './routes/empresa.routes.js';
 import { coletaRoutes } from './routes/coleta.routes.js';
@@ -25,6 +27,13 @@ const PORT = Number(process.env.PORT) || 3001;
 
 // Registrar Plugins
 fastify.register(cors, { origin: '*' });
+
+// Servir arquivos estáticos (PDFs e DOCXs)
+const outputDir = process.env.PGR_OUTPUT_DIR || path.join(process.cwd(), 'output');
+fastify.register(fastifyStatic, {
+  root: outputDir,
+  prefix: '/outputs/', // Os arquivos serão acessíveis em /outputs/...
+});
 
 // Registrar Rotas
 fastify.register(empresaRoutes, { prefix: '/api/empresas' });

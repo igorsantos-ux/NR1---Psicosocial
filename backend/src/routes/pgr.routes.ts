@@ -50,6 +50,8 @@ export async function pgrRoutes(fastify: FastifyInstance) {
         return { pgrId: pgr.id, status: pgr.status };
     });
 
+    const baseOutputDir = process.env.PGR_OUTPUT_DIR || path.join(process.cwd(), 'output');
+
     fastify.get('/:id/status', async (request, reply) => {
         const { id } = request.params as { id: string };
         const pgr = await prisma.pgr.findUnique({
@@ -59,7 +61,12 @@ export async function pgrRoutes(fastify: FastifyInstance) {
 
         if (!pgr) return reply.status(404).send({ message: 'PGR não encontrado' });
 
-        return pgr;
+        // Adiciona as URLs públicas para o frontend
+        return {
+            ...pgr,
+            urlPdf: pgr.caminhoPdf ? `/outputs/${pgr.caminhoPdf}` : null,
+            urlDocx: pgr.caminhoDocx ? `/outputs/${pgr.caminhoDocx}` : null
+        };
     });
 
     fastify.get('/:id/download/docx', async (request, reply) => {
@@ -68,7 +75,8 @@ export async function pgrRoutes(fastify: FastifyInstance) {
 
         if (!pgr || !pgr.caminhoDocx) return reply.status(404).send({ message: 'Arquivo não disponível' });
 
-        const fileBuffer = await fs.readFile(pgr.caminhoDocx);
+        const fullPath = path.isAbsolute(pgr.caminhoDocx) ? pgr.caminhoDocx : path.join(baseOutputDir, pgr.caminhoDocx);
+        const fileBuffer = await fs.readFile(fullPath);
         reply
             .header('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
             .header('Content-Disposition', `attachment; filename=PGR-${id}.docx`)
@@ -81,7 +89,8 @@ export async function pgrRoutes(fastify: FastifyInstance) {
 
         if (!pgr || !pgr.caminhoPdf) return reply.status(404).send({ message: 'Arquivo não disponível' });
 
-        const fileBuffer = await fs.readFile(pgr.caminhoPdf);
+        const fullPath = path.isAbsolute(pgr.caminhoPdf) ? pgr.caminhoPdf : path.join(baseOutputDir, pgr.caminhoPdf);
+        const fileBuffer = await fs.readFile(fullPath);
         reply
             .header('Content-Type', 'application/pdf')
             .header('Content-Disposition', `attachment; filename=PGR-${id}.pdf`)
