@@ -53,13 +53,10 @@ export async function coletaRoutes(fastify: FastifyInstance) {
             colaboradorId: z.string().uuid(),
             gheId: z.string(),
             cargo: z.string(),
-            respostas: z.array(z.object({
-                pergunta: string(),
-                resposta: string()
-            }))
+            respostasRaw: z.any()
         });
 
-        const { colaboradorId, gheId, cargo, respostas } = bodySchema.parse(request.body);
+        const { colaboradorId, gheId, cargo, respostasRaw } = bodySchema.parse(request.body);
 
         const empresa = await prisma.empresa.findUnique({
             where: { tokenColeta: token }
@@ -76,7 +73,7 @@ export async function coletaRoutes(fastify: FastifyInstance) {
                 empresaId: empresa.id,
                 gheId,
                 cargo,
-                respostasRaw: respostas,
+                respostasRaw: respostasRaw,
                 processada: false
             }
         });
