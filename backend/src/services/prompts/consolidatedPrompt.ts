@@ -100,8 +100,17 @@ Retorne EXCLUSIVAMENTE neste formato JSON:
   "secao_13_recomendacoes": "texto técnico longo...",
   "secao_14_consideracoes_finais": "texto de encerramento...",
   "resumo_executivo": {
-    "parecer_sintetico": "string",
-    "ghes_atencao_imediata": []
+    "total_ghes": 0,
+    "total_respondentes": 0,
+    "distribuicao_geral": {
+      "trivial": 0,
+      "moderado": 0,
+      "substancial": 0,
+      "intoleravel": 0
+    },
+    "ghes_atencao_imediata": [],
+    "top_riscos": [],
+    "parecer_sintetico": "string"
   }
 }
 `;
