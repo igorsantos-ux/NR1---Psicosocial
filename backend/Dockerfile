@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libreoffice-common \
     libreoffice-writer \
+    libreoffice-java-common \
+    default-jre-headless \
     fonts-liberation \
     libxml2 \
     && apt-get clean \

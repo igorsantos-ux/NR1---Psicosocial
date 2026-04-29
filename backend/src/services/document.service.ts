@@ -164,9 +164,12 @@ export class DocumentService {
 
             const timeout = process.env.LIBREOFFICE_TIMEOUT_MS ? parseInt(process.env.LIBREOFFICE_TIMEOUT_MS) : 60000;
 
-            // No Easypanel (Linux), usamos o comando 'libreoffice' ou 'soffice'
-            const command = `libreoffice --headless --convert-to pdf --outdir "${tmpDir}" "${docxPath}"`;
+            // No Easypanel (Linux), usamos o comando 'soffice' que é o binário padrão headless
+            // Adicionamos -env:UserInstallation para evitar conflitos de perfil em containers
+            const userProfileDir = path.join(tmpDir, 'libo_user');
+            const command = `soffice --headless "-env:UserInstallation=file://${userProfileDir}" --convert-to pdf --outdir "${tmpDir}" "${docxPath}"`;
 
+            console.log(`[DocumentService] Executando conversão: ${command}`);
             await execAsync(command, { timeout });
 
             const pdfPath = path.join(tmpDir, 'input.pdf');
