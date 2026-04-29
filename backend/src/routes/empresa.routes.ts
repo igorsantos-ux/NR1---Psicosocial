@@ -22,7 +22,7 @@ const empresaSchema = z.object({
     dataExpiracaoLink: z.preprocess((arg) => {
         if (typeof arg === "string" || arg instanceof Date) return new Date(arg);
         return arg;
-    }, z.date({ invalid_type_error: "Data de expiração inválida" })),
+    }, z.date({ message: "Data de expiração inválida" })),
     engenheiroId: z.string().uuid({ message: "ID do engenheiro deve ser um UUID válido" }),
     empresaElaboradora: z.string().optional(),
     ghes: z.array(z.object({
