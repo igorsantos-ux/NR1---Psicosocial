@@ -132,11 +132,15 @@ export default function ValidatePGR() {
                             <div className="grid grid-cols-2 gap-4">
                               <div className="p-3 bg-gray-50 rounded-2xl text-center">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase">Respondentes</p>
-                                <p className="text-xl font-black text-clinicfy-dark">{pgr?.empresa?._count?.respostas || 0}</p>
+                                <p className="text-xl font-black text-clinicfy-dark">
+                                  {pgr?.jsonGerado?.resumo_executivo?.total_respondentes || pgr?.empresa?._count?.respostas || 0}
+                                </p>
                               </div>
                               <div className="p-3 bg-gray-50 rounded-2xl text-center">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase">GHEs</p>
-                                <p className="text-xl font-black text-clinicfy-dark">{pgr?.empresa?._count?.ghes || 0}</p>
+                                <p className="text-xl font-black text-clinicfy-dark">
+                                  {pgr?.jsonGerado?.resumo_executivo?.total_ghes || pgr?.empresa?._count?.ghes || 0}
+                                </p>
                               </div>
                             </div>
 
@@ -145,21 +149,21 @@ export default function ValidatePGR() {
                               <div className="space-y-2">
                                 <div className="flex items-center gap-3">
                                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                    <div className="h-full bg-green-500" style={{ width: '60%' }} />
+                                    <div className="h-full bg-green-500" style={{ width: `${pgr?.jsonGerado?.resumo_executivo?.distribuicao_geral?.trivial || 0}%` }} />
                                   </div>
-                                  <span className="text-[10px] font-bold text-gray-600">60% Trivial</span>
+                                  <span className="text-[10px] font-bold text-gray-600">{pgr?.jsonGerado?.resumo_executivo?.distribuicao_geral?.trivial || 0}% Trivial</span>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                    <div className="h-full bg-yellow-400" style={{ width: '25%' }} />
+                                    <div className="h-full bg-yellow-400" style={{ width: `${pgr?.jsonGerado?.resumo_executivo?.distribuicao_geral?.moderado || 0}%` }} />
                                   </div>
-                                  <span className="text-[10px] font-bold text-gray-600">25% Mod.</span>
+                                  <span className="text-[10px] font-bold text-gray-600">{pgr?.jsonGerado?.resumo_executivo?.distribuicao_geral?.moderado || 0}% Mod.</span>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                    <div className="h-full bg-orange-500" style={{ width: '15%' }} />
+                                    <div className="h-full bg-orange-500" style={{ width: `${pgr?.jsonGerado?.resumo_executivo?.distribuicao_geral?.substancial || 0}%` }} />
                                   </div>
-                                  <span className="text-[10px] font-bold text-gray-600">15% Subst.</span>
+                                  <span className="text-[10px] font-bold text-gray-600">{pgr?.jsonGerado?.resumo_executivo?.distribuicao_geral?.substancial || 0}% Subst.</span>
                                 </div>
                               </div>
                             </div>
@@ -167,11 +171,14 @@ export default function ValidatePGR() {
                             <div className="space-y-2 pt-2">
                               <p className="text-[10px] font-bold text-gray-400 uppercase ml-1">Top Riscos Identificados</p>
                               <ul className="space-y-1">
-                                {['Sobrecarga de trabalho', 'Falta de feedback', 'Ruído excessivo'].map((r, i) => (
+                                {(pgr?.jsonGerado?.resumo_executivo?.top_riscos || []).slice(0, 3).map((r: string, i: number) => (
                                   <li key={i} className="flex items-center gap-2 text-[11px] text-gray-600">
                                     <TrendingUp size={12} className="text-red-400" /> {r}
                                   </li>
                                 ))}
+                                {(!pgr?.jsonGerado?.resumo_executivo?.top_riscos || pgr.jsonGerado.resumo_executivo.top_riscos.length === 0) && (
+                                  <li className="text-[10px] text-gray-400 italic italic">Nenhum risco crítico destacado.</li>
+                                )}
                               </ul>
                             </div>
                         </div>

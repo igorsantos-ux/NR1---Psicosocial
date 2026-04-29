@@ -56,7 +56,15 @@ export async function pgrRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const pgr = await prisma.pgr.findUnique({
             where: { id },
-            select: { status: true, caminhoDocx: true, caminhoPdf: true, observacoesEngenheiro: true }
+            include: {
+                empresa: {
+                    include: {
+                        _count: {
+                            select: { ghes: true, respostas: true }
+                        }
+                    }
+                }
+            }
         });
 
         if (!pgr) return reply.status(404).send({ message: 'PGR não encontrado' });
