@@ -1,8 +1,7 @@
-import fs from 'fs/promises';
-import path from 'path';
 import dotenv from 'dotenv';
-
-
+import { SYSTEM_PROMPT } from './prompts/systemPrompt.js';
+import { INDIVIDUAL_PROMPT } from './prompts/individualPrompt.js';
+import { CONSOLIDATED_PROMPT } from './prompts/consolidatedPrompt.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest';
@@ -43,11 +42,6 @@ export interface PGRConsolidadoJSON {
 }
 
 export class GeminiService {
-    private static async loadPrompt(name: string): Promise<string> {
-        const filePath = path.join(__dirname, 'prompts', `${name}.txt`);
-        return await fs.readFile(filePath, 'utf-8');
-    }
-
     private static replacePlaceholders(prompt: string, variables: Record<string, any>): string {
         let result = prompt;
         for (const [key, value] of Object.entries(variables)) {
@@ -103,10 +97,7 @@ export class GeminiService {
         respostas: Array<{ pergunta: string, resposta: string }>;
         empresaContext: { nome: string; cnpj: string; engenheiro: string; crea: string; data: string };
     }): Promise<AnaliseIndividualJSON> {
-        const systemPrompt = await this.loadPrompt('system');
-        const individualPromptTemplate = await this.loadPrompt('individual');
-
-        const systemInstruction = this.replacePlaceholders(systemPrompt, {
+        const systemInstruction = this.replacePlaceholders(SYSTEM_PROMPT, {
             empresa_nome: params.empresaContext.nome,
             cnpj: params.empresaContext.cnpj,
             engenheiro_nome: params.empresaContext.engenheiro,
@@ -114,7 +105,7 @@ export class GeminiService {
             data_referencia: params.empresaContext.data
         });
 
-        const prompt = this.replacePlaceholders(individualPromptTemplate, {
+        const prompt = this.replacePlaceholders(INDIVIDUAL_PROMPT, {
             colaboradorId: params.colaboradorId,
             gheName: params.gheNome,
             cargo: params.cargo,
@@ -133,10 +124,7 @@ export class GeminiService {
         dataGeracao: string;
         vigencia: { inicio: string; fim: string };
     }): Promise<PGRConsolidadoJSON> {
-        const systemPrompt = await this.loadPrompt('system');
-        const consolidatedPromptTemplate = await this.loadPrompt('consolidated');
-
-        const systemInstruction = this.replacePlaceholders(systemPrompt, {
+        const systemInstruction = this.replacePlaceholders(SYSTEM_PROMPT, {
             empresa_nome: params.empresa.razaoSocial,
             cnpj: params.empresa.cnpj,
             engenheiro_nome: params.empresa.engenheiro.nome,
@@ -144,7 +132,7 @@ export class GeminiService {
             data_referencia: params.dataGeracao
         });
 
-        const prompt = this.replacePlaceholders(consolidatedPromptTemplate, {
+        const prompt = this.replacePlaceholders(CONSOLIDATED_PROMPT, {
             empresaNome: params.empresa.razaoSocial,
             cnpj: params.empresa.cnpj,
             cnae: params.empresa.cnae,
