@@ -150,13 +150,17 @@ export class DocumentService {
     }
 
     /**
-     * Limpa caracteres especiais que quebram o XML do Word
+     * Limpa caracteres especiais e caracteres de controle que quebram o XML do Word
      */
     private static sanitizeData(data: any): any {
         if (data === null || data === undefined) return '';
         
         if (typeof data === 'string') {
-            return data
+            // Remove caracteres de controle (non-printable) exceto quebras de linha e tabs
+            // Isso evita que caracteres invisíveis da IA quebrem o XML
+            let sanitized = data.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+            
+            return sanitized
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
