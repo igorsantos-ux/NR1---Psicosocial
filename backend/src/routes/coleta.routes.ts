@@ -50,7 +50,7 @@ export async function coletaRoutes(fastify: FastifyInstance) {
     fastify.post('/:token/responder', async (request, reply) => {
         const { token } = request.params as { token: string };
         const bodySchema = z.object({
-            colaboradorId: z.string().uuid(),
+            colaboradorId: z.string(),
             gheId: z.string(),
             cargo: z.string(),
             respostasRaw: z.any()
