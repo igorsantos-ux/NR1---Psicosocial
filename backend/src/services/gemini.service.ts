@@ -52,17 +52,19 @@ export class GeminiService {
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                 }
 
-                console.log(`[Gemini] Chamando API v1beta (${GEMINI_MODEL})`);
+                console.log(`[Gemini] Chamando API v1 (${GEMINI_MODEL})`);
                 const response = await fetch(GEMINI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { parts: [{ text: systemInstruction }] },
+                        contents: [{ 
+                            parts: [{ 
+                                text: `SISTEMA: ${systemInstruction}\n\nUSUÁRIO: ${prompt}` 
+                            }] 
+                        }],
                         generationConfig: {
                             temperature,
-                            maxOutputTokens: maxTokens,
-                            responseMimeType: "application/json"
+                            maxOutputTokens: maxTokens
                         }
                     })
                 });
