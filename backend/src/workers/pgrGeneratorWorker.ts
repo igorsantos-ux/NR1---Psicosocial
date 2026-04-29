@@ -98,7 +98,7 @@ export async function processarGeracaoPGR(pgrId: string) {
 
         // 4. Preencher template DOCX
         log('📄 Preenchendo template DOCX...');
-        const docxBuffer = await DocumentService.preencherTemplatePGR(jsonGerado);
+        const docxBuffer = await DocumentService.preencherTemplatePGR(jsonGerado, empresa, empresa.engenheiro);
         log('✅ DOCX gerado', { bytes: docxBuffer.length });
 
         // 5. Converter para PDF
