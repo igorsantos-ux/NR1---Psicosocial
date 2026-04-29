@@ -67,10 +67,10 @@ export async function preencherTemplatePGR(
     },
     
     documento: {
-      data_emissao_formatada: `${MESES[agora.getMonth()]}/${agora.getFullYear()}`,
-      data_validade_formatada: `${MESES[validade.getMonth()]}/${validade.getFullYear()}`,
-      data_emissao_extenso: `${agora.getDate()} de ${MESES[agora.getMonth()].toLowerCase()} de ${agora.getFullYear()}`,
-      vigencia: `${MESES[agora.getMonth()]} DE ${agora.getFullYear()} À ${MESES[validade.getMonth()]} DE ${validade.getFullYear()}`,
+      data_emissao_formatada: `${MESES[agora.getMonth()] || ''}/${agora.getFullYear()}`,
+      data_validade_formatada: `${MESES[validade.getMonth()] || ''}/${validade.getFullYear()}`,
+      data_emissao_extenso: `${agora.getDate()} de ${(MESES[agora.getMonth()] || '').toLowerCase()} de ${agora.getFullYear()}`,
+      vigencia: `${MESES[agora.getMonth()] || ''} DE ${agora.getFullYear()} À ${MESES[validade.getMonth()] || ''} DE ${validade.getFullYear()}`,
       periodo_coleta: options?.periodoColeta 
         ? `${options.periodoColeta.inicio.toLocaleDateString('pt-BR')} a ${options.periodoColeta.fim.toLocaleDateString('pt-BR')}`
         : '',
