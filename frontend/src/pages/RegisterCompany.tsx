@@ -82,11 +82,20 @@ export default function RegisterCompany() {
         cargos: g.cargos
       }));
 
+      // Formata a data de expiração para ISO, garantindo que seja válida
+      let dataExpiracao = null;
+      if (formData.dataExpiracaoLink) {
+        const d = new Date(formData.dataExpiracaoLink);
+        if (!isNaN(d.getTime())) {
+          dataExpiracao = d.toISOString();
+        }
+      }
+
       const response = await api.post('/empresas', {
         ...formData,
         totalFuncionarios: Number(formData.totalFuncionarios),
         grauRiscoNr4: Number(formData.grauRiscoNr4),
-        dataExpiracaoLink: formData.dataExpiracaoLink ? new Date(formData.dataExpiracaoLink).toISOString() : null,
+        dataExpiracaoLink: dataExpiracao,
         ghes: ghesPayload
       });
 

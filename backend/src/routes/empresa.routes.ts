@@ -19,8 +19,11 @@ const empresaSchema = z.object({
     telefone: z.string().optional(),
     totalFuncionarios: z.number(),
     horarioTrabalho: z.string().optional(),
-    dataExpiracaoLink: z.coerce.date(),
-    engenheiroId: z.string(),
+    dataExpiracaoLink: z.preprocess((arg) => {
+        if (typeof arg === "string" || arg instanceof Date) return new Date(arg);
+        return arg;
+    }, z.date({ invalid_type_error: "Data de expiração inválida" })),
+    engenheiroId: z.string().uuid({ message: "ID do engenheiro deve ser um UUID válido" }),
     empresaElaboradora: z.string().optional(),
     ghes: z.array(z.object({
         codigo: z.string(),
@@ -41,6 +44,17 @@ const empresaSchema = z.object({
 export async function empresaRoutes(fastify: FastifyInstance) {
     fastify.post('/', async (request, reply) => {
         const data = empresaSchema.parse(request.body);
+        
+        // Verificar se o engenheiro existe antes de tentar criar a empresa
+        const engenheiroExiste = await prisma.engenheiro.findUnique({
+            where: { id: data.engenheiroId }
+        });
+
+        if (!engenheiroExiste) {
+            return reply.status(400).send({ 
+                message: 'O Engenheiro selecionado não existe no banco de dados. Por favor, execute o comando de seed ou verifique as configurações.' 
+            });
+        }
 
         const subdominio = `${slugify(data.razaoSocial)}-${generateRandomSuffix()}`;
 
