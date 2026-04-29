@@ -16,6 +16,7 @@ import { PrismaClient } from '@prisma/client';
 import { empresaRoutes } from './routes/empresa.routes.js';
 import { coletaRoutes } from './routes/coleta.routes.js';
 import { pgrRoutes } from './routes/pgr.routes.js';
+import { adminRoutes } from './routes/admin.routes.js';
 import { setupCrons } from './crons/expirarColetas.js';
 
 const fastify = Fastify({ logger: true });
@@ -29,6 +30,7 @@ fastify.register(cors, { origin: '*' });
 fastify.register(empresaRoutes, { prefix: '/api/empresas' });
 fastify.register(coletaRoutes, { prefix: '/api/q' });
 fastify.register(pgrRoutes, { prefix: '/api/pgr' });
+fastify.register(adminRoutes, { prefix: '/api' });
 
 // Global Error Handler para tratar erros do Zod
 fastify.setErrorHandler((error: any, request, reply) => {
