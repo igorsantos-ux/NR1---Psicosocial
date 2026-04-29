@@ -172,4 +172,4 @@ Retorne EXCLUSIVAMENTE neste formato JSON:
     "parecer_sintetico": "string (máximo 2 frases para o painel)"
   }
 }
-\`;
+`;
