@@ -3,9 +3,9 @@ import { SYSTEM_PROMPT } from './prompts/systemPrompt.js';
 import { INDIVIDUAL_PROMPT } from './prompts/individualPrompt.js';
 import { CONSOLIDATED_PROMPT } from './prompts/consolidatedPrompt.js';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-pro';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface AnaliseIndividualJSON {
     colaborador_id: string;
@@ -55,20 +55,19 @@ export class GeminiService {
         const maxRetries = 3;
         let attempt = 0;
 
-        // Na v1, mesclamos a instrução de sistema no prompt
-        const fullPrompt = `${systemInstruction}\n\nRESPOSTA ESPERADA EM JSON:\n${prompt}`;
-
         while (attempt < maxRetries) {
             try {
-                console.log(`[Gemini] Chamando API v1: ${GEMINI_URL.replace(GEMINI_API_KEY, '***')}`);
+                console.log(`[Gemini] Chamando API v1beta: ${GEMINI_URL.replace(GEMINI_API_KEY, '***')}`);
                 const response = await fetch(GEMINI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: fullPrompt }] }],
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: systemInstruction }] },
                         generationConfig: {
                             temperature,
-                            maxOutputTokens: maxTokens
+                            maxOutputTokens: maxTokens,
+                            responseMimeType: "application/json"
                         }
                     })
                 });
