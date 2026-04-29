@@ -130,13 +130,12 @@ export class DocumentService {
                 secao_14_consideracoes_finais: jsonConsolidado.secao_14_consideracoes_finais || ''
             };
 
-            console.log('[Document Service] Renderizando template com dados:', {
-                empresa: dadosTemplate.empresa.razao_social,
-                cnpj: dadosTemplate.empresa.cnpj,
-                total_ghes: dadosTemplate.ghes.length
-            });
+            // Sanitizar dados para evitar Malformed XML (caracteres especiais que quebram o Word)
+            const dadosSanitizados = this.sanitizeData(dadosTemplate);
 
-            doc.render(dadosTemplate);
+            console.log('[Document Service] Renderizando template com dados sanitizados');
+
+            doc.render(dadosSanitizados);
 
             const buffer = doc.getZip().generate({
                 type: 'nodebuffer',
@@ -148,6 +147,36 @@ export class DocumentService {
             console.error('Erro ao preencher template DOCX:', error);
             throw new Error(`Falha na geração do DOCX: ${error.message}`);
         }
+    }
+
+    /**
+     * Limpa caracteres especiais que quebram o XML do Word
+     */
+    private static sanitizeData(data: any): any {
+        if (data === null || data === undefined) return '';
+        
+        if (typeof data === 'string') {
+            return data
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        }
+        
+        if (Array.isArray(data)) {
+            return data.map(item => this.sanitizeData(item));
+        }
+        
+        if (typeof data === 'object') {
+            const sanitized: any = {};
+            for (const key in data) {
+                sanitized[key] = this.sanitizeData(data[key]);
+            }
+            return sanitized;
+        }
+        
+        return data;
     }
 
     /**
