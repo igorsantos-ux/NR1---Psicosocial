@@ -39,7 +39,7 @@ export class GeminiService {
         prompt: string, 
         systemInstruction: string, 
         maxTokens: number = 8192, 
-        temperature: number = 0.2,
+        temperature: number = 0.1,
         retries: number = 5
     ): Promise<any> {
         let lastError: any;
@@ -91,9 +91,14 @@ export class GeminiService {
 
                 try {
                     return JSON.parse(repairedJson);
-                } catch (parseError) {
-                    console.error('[Gemini] Erro no Parse do JSON. Tentando parse original...');
-                    return JSON.parse(text);
+                } catch (parseError: any) {
+                    // Se falhar o reparo, tenta o original. Se falhar o original, mostra o que veio.
+                    try {
+                        return JSON.parse(text);
+                    } catch (e: any) {
+                        console.error('[Gemini] Falha total no parse:', text);
+                        throw new Error(`Erro de Sintaxe JSON (Posição 366). Resposta parcial da IA: ${text.substring(0, 400)}... Detalhe: ${e.message}`);
+                    }
                 }
 
             } catch (error: any) {
