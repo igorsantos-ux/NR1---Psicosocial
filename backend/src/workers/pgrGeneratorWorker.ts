@@ -1,6 +1,6 @@
 import { PrismaClient, type GHE, type RespostaQuestionario, type Cargo, type Empresa, type Engenheiro } from '@prisma/client';
 import { GeminiService } from '../services/gemini.service.js';
-import { DocumentService } from '../services/document.service.js';
+import { preencherTemplatePGR, converterDocxParaPdf } from '../services/document.service.js';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -104,7 +104,7 @@ export async function processarGeracaoPGR(pgrId: string) {
 
         // 4. Preencher template DOCX
         log('📄 Preenchendo template DOCX...');
-        const docxBuffer = await DocumentService.preencherTemplatePGR(
+        const docxBuffer = await preencherTemplatePGR(
             jsonGerado, 
             empresa, 
             empresa.engenheiro,
@@ -120,7 +120,7 @@ export async function processarGeracaoPGR(pgrId: string) {
 
         // 5. Converter para PDF
         log('🔄 Convertendo para PDF...');
-        const pdfBuffer = await DocumentService.converterDocxParaPdf(docxBuffer);
+        const pdfBuffer = await converterDocxParaPdf(docxBuffer);
         log('✅ PDF gerado', { bytes: pdfBuffer.length });
 
         // 6. Salvar arquivos (storage local)
