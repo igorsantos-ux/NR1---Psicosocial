@@ -74,6 +74,32 @@ export class GeminiService {
 
                 const data: any = await response.json();
 
+                if (response.status === 429 || (data.error?.message?.includes('high demand'))) {
+                    console.warn(`[Gemini] Alta demanda no modelo ${GEMINI_MODEL}. Tentando fallback...`);
+                    // Se estivermos usando o 2.5, tenta o 1.5
+                    if (GEMINI_MODEL.includes('2.5')) {
+                        const fallbackUrl = GEMINI_URL.replace('2.5-flash', '1.5-flash');
+                        const fallbackRes = await fetch(fallbackUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: prompt }] }],
+                                systemInstruction: { parts: [{ text: systemInstruction }] },
+                                generationConfig: {
+                                    temperature,
+                                    maxOutputTokens: maxTokens,
+                                    responseMimeType: "application/json"
+                                }
+                            })
+                        });
+                        if (fallbackRes.ok) {
+                            const fallbackData = await fallbackRes.json();
+                            const text = fallbackData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                            return JSON.parse(text);
+                        }
+                    }
+                }
+
                 if (!response.ok) {
                     throw new Error(data.error?.message || 'Erro na API do Gemini');
                 }

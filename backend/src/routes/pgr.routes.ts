@@ -130,7 +130,7 @@ export async function pgrRoutes(fastify: FastifyInstance) {
             validadoEm: pgr.validadoEm,
             temDocx: !!pgr.caminhoDocx,
             temPdf: !!pgr.caminhoPdf,
-            resumo: (pgr.jsonGerado as any)?.resumo_executivo || null
+            resumo: (pgr.jsonGerado as any)?.resumo_executivo?.parecer_sintetico || null
         }));
     });
 }
