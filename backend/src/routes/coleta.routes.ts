@@ -36,8 +36,13 @@ export async function coletaRoutes(fastify: FastifyInstance) {
         }
 
         return {
-            nomeEmpresa: empresa.nomeFantasia || empresa.razaoSocial,
-            ghes: empresa.ghes
+            empresa: {
+                nomeFantasia: empresa.nomeFantasia,
+                razaoSocial: empresa.razaoSocial,
+                statusColeta: empresa.statusColeta,
+                dataExpiracaoLink: empresa.dataExpiracaoLink,
+                ghes: empresa.ghes
+            }
         };
     });
 
