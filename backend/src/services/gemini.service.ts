@@ -81,7 +81,14 @@ export class GeminiService {
                 lastError = error;
                 console.error(`[Gemini] Falha na tentativa ${i + 1}: ${error.message}`);
                 
-                // Se for erro de cota ou demanda, continua tentando. Se for erro de sintaxe/auth, para.
+                // Se for erro de cota (429 ou Quota Exceeded), esperamos mais tempo (30s)
+                if (error.message.includes('Quota exceeded') || error.message.includes('429')) {
+                    console.warn('[Gemini] Cota atingida. Aguardando 30 segundos para reset de limite...');
+                    await new Promise(resolve => setTimeout(resolve, 30000));
+                    continue; 
+                }
+
+                // Se for erro de sintaxe/auth, para.
                 if (error.message.includes('API key not valid') || error.message.includes('Unexpected token')) {
                     throw error;
                 }
