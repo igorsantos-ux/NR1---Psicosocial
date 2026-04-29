@@ -3,13 +3,14 @@ FROM node:20-slim
 WORKDIR /app
 
 # Instalar dependências necessárias para o Prisma, LibreOffice e fontes
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     ca-certificates \
     libreoffice-common \
     libreoffice-writer \
     fonts-liberation \
     libxml2 \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
