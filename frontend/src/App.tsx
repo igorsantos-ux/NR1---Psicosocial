@@ -8,6 +8,8 @@ import GheManager from './pages/GheManager';
 import PgrReport from './pages/PgrReport';
 import Settings from './pages/Settings';
 import ValidatePGR from './pages/ValidatePGR';
+import ListaEmpresas from './pages/admin/empresas/ListaEmpresas';
+import DetalhesEmpresa from './pages/admin/empresas/DetalhesEmpresa';
 import './index.css';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean, error?: Error }> {
@@ -61,6 +63,8 @@ function App() {
           <Route path="/admin/companies" element={<RegisterCompany />} />
           <Route path="/admin/plans" element={<ActionPlans />} />
           <Route path="/admin/ghes" element={<GheManager />} />
+          <Route path="/admin/empresas" element={<ListaEmpresas />} />
+          <Route path="/admin/empresas/:id" element={<DetalhesEmpresa />} />
           <Route path="/admin/pgr" element={<PgrReport />} />
           <Route path="/admin/settings" element={<Settings />} />
 
