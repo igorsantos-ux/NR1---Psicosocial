@@ -2,7 +2,7 @@ import { INDIVIDUAL_PROMPT } from './prompts/individualPrompt.js';
 import { CONSOLIDATED_PROMPT } from './prompts/consolidatedPrompt.js';
 
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface AnaliseIndividualJSON {
@@ -105,10 +105,10 @@ export class GeminiService {
                 lastError = error;
                 console.error(`[Gemini] Falha na tentativa ${i + 1}: ${error.message}`);
                 
-                // Se for erro de cota (429 ou Quota Exceeded), esperamos mais tempo (30s)
+                // Se for erro de cota (429 ou Quota Exceeded), esperamos mais tempo (60s)
                 if (error.message.includes('Quota exceeded') || error.message.includes('429')) {
-                    console.warn('[Gemini] Cota atingida. Aguardando 30 segundos para reset de limite...');
-                    await new Promise(resolve => setTimeout(resolve, 30000));
+                    console.warn('[Gemini] Cota atingida. Aguardando 60 segundos para reset de limite...');
+                    await new Promise(resolve => setTimeout(resolve, 60000));
                     continue; 
                 }
 
