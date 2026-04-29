@@ -155,21 +155,21 @@ Retorne EXCLUSIVAMENTE neste formato JSON:
       }
     ]
   },
-  "secao_13_recomendacoes": "string (texto técnico completo)",
-  "secao_14_consideracoes_finais": "string (texto técnico completo)",
+  "secao_13_recomendacoes": "texto",
+  "secao_14_consideracoes_finais": "texto",
   "resumo_executivo": {
     "total_ghes": 0,
     "total_respondentes": 0,
-    "periodo_coleta": "string",
+    "periodo_coleta": "",
     "distribuicao_geral": {
       "trivial": 0,
       "moderado": 0,
       "substancial": 0,
       "intoleravel": 0
     },
-    "ghes_atencao_imediata": ["string"],
-    "top_riscos": ["string"],
-    "parecer_sintetico": "string (máximo 2 frases para o painel)"
+    "ghes_atencao_imediata": [],
+    "top_riscos": [],
+    "parecer_sintetico": ""
   }
 }
 `;

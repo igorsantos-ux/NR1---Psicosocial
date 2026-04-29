@@ -86,7 +86,15 @@ export class GeminiService {
                     text = text.substring(firstBrace, lastBrace + 1);
                 }
 
-                return JSON.parse(text);
+                // Reparo de JSON: remove vírgulas pendentes antes de fechar colchetes ou chaves
+                const repairedJson = text.replace(/,\s*([\]}])/g, '$1');
+
+                try {
+                    return JSON.parse(repairedJson);
+                } catch (parseError) {
+                    console.error('[Gemini] Erro no Parse do JSON. Tentando parse original...');
+                    return JSON.parse(text);
+                }
 
             } catch (error: any) {
                 lastError = error;
