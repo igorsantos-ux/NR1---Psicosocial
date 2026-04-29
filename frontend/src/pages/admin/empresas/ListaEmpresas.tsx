@@ -37,6 +37,16 @@ export default function ListaEmpresas() {
     fetchData();
   }, [filter]);
 
+  // Polling para atualizar status de geração
+  useEffect(() => {
+    const hasProcessing = empresas.some(e => e.statusGeral === 'GERANDO');
+    
+    if (hasProcessing) {
+      const interval = setInterval(fetchData, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [empresas]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchData();

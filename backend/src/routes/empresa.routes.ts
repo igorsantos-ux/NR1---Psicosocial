@@ -158,7 +158,8 @@ export async function empresaRoutes(fastify: FastifyInstance) {
                 ...e,
                 statusColeta: statusCalculado,
                 statusGeral: statusGeral,
-                totalRespostas: e._count.respostas
+                totalRespostas: e._count.respostas,
+                pgrId: ultimoPgr?.id || null
             };
         });
 
