@@ -1,41 +1,25 @@
-import dotenv from 'dotenv';
-import { SYSTEM_PROMPT } from './prompts/systemPrompt.js';
 import { INDIVIDUAL_PROMPT } from './prompts/individualPrompt.js';
 import { CONSOLIDATED_PROMPT } from './prompts/consolidatedPrompt.js';
 
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface AnaliseIndividualJSON {
-    colaborador_id: string;
     ghe: string;
-    cargo: string;
-    riscos_identificados: Array<{
+    riscos: Array<{
         fator: string;
-        descricao_tecnica: string;
-        frequencia_relato: string;
-        fonte_geradora: string;
-        efeito: string;
-        orientacao: string;
-        probabilidade: number;
-        consequencia: number;
-        score: number;
-        nivel_risco: string;
+        severidade: number;
+        frequencia: number;
+        recomendacao: string;
     }>;
-    nivel_risco_dominante: string;
-    observacoes_tecnicas: string;
-    requer_atencao_imediata: boolean;
+    conclusao_tecnica: string;
 }
 
 export interface PGRConsolidadoJSON {
     identificacao: any;
     secao_10_por_ghe: any[];
-    secao_11: {
-        cronograma_acoes: any[];
-        responsabilidades: any[];
-        prioridades: any[];
-    };
+    secao_11: any;
     secao_13_recomendacoes: string;
     secao_14_consideracoes_finais: string;
     resumo_executivo: any;
@@ -51,13 +35,24 @@ export class GeminiService {
         return result;
     }
 
-    private static async callWithRetry(prompt: string, systemInstruction: string, temperature: number = 0.2, maxTokens: number = 8192): Promise<any> {
-        const maxRetries = 3;
-        let attempt = 0;
+    private static async callWithRetry(
+        prompt: string, 
+        systemInstruction: string, 
+        maxTokens: number = 8192, 
+        temperature: number = 0.2,
+        retries: number = 5
+    ): Promise<any> {
+        let lastError: any;
 
-        while (attempt < maxRetries) {
+        for (let i = 0; i < retries; i++) {
             try {
-                console.log(`[Gemini] Chamando API v1beta: ${GEMINI_URL.replace(GEMINI_API_KEY, '***')}`);
+                if (i > 0) {
+                    const waitTime = Math.pow(2, i) * 1000;
+                    console.log(`[Gemini] Tentativa ${i + 1} de ${retries}. Aguardando ${waitTime}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+
+                console.log(`[Gemini] Chamando API v1beta (${GEMINI_MODEL})`);
                 const response = await fetch(GEMINI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -79,89 +74,32 @@ export class GeminiService {
                 }
 
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                
-                // Limpeza de Markdown se necessário
                 const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
                 return JSON.parse(cleanJson);
-            } catch (error: any) {
-                attempt++;
-                if (attempt >= maxRetries) throw error;
 
-                const delay = Math.pow(2, attempt) * 1000;
-                console.warn(`Tentativa ${attempt} falhou. Tentando novamente em ${delay}ms...`, error.message);
-                await new Promise(resolve => setTimeout(resolve, delay));
+            } catch (error: any) {
+                lastError = error;
+                console.error(`[Gemini] Falha na tentativa ${i + 1}: ${error.message}`);
+                
+                // Se for erro de cota ou demanda, continua tentando. Se for erro de sintaxe/auth, para.
+                if (error.message.includes('API key not valid') || error.message.includes('Unexpected token')) {
+                    throw error;
+                }
             }
         }
+
+        throw lastError;
     }
 
-    static async analisarRespostaIndividual(params: {
-        colaboradorId: string;
-        gheNome: string;
-        cargo: string;
-        respostas: Array<{ pergunta: string, resposta: string }>;
-        empresaContext: { nome: string; cnpj: string; engenheiro: string; crea: string; data: string };
-    }): Promise<AnaliseIndividualJSON> {
-        const systemInstruction = this.replacePlaceholders(SYSTEM_PROMPT, {
-            empresa_nome: params.empresaContext.nome,
-            cnpj: params.empresaContext.cnpj,
-            engenheiro_nome: params.empresaContext.engenheiro,
-            crea_engenheiro: params.empresaContext.crea,
-            data_referencia: params.empresaContext.data
-        });
-
-        const prompt = this.replacePlaceholders(INDIVIDUAL_PROMPT, {
-            colaboradorId: params.colaboradorId,
-            gheName: params.gheNome,
-            cargo: params.cargo,
-            respostasNodes: params.respostas
-        });
-
-        return await this.callWithRetry(prompt, systemInstruction, 0.2);
-    }
-
-    static async gerarPGRConsolidado(params: {
-        empresa: any;
-        ghes: any[];
-        analisesPorGhe: Record<string, any[]>;
-        periodoColeta: { inicio: string; fim: string };
-        totalRespondentes: number;
-        dataGeracao: string;
-        vigencia: { inicio: string; fim: string };
-    }): Promise<PGRConsolidadoJSON> {
-        const systemInstruction = this.replacePlaceholders(SYSTEM_PROMPT, {
-            empresa_nome: params.empresa.razaoSocial,
-            cnpj: params.empresa.cnpj,
-            engenheiro_nome: params.empresa.engenheiro.nome,
-            crea_engenheiro: params.empresa.engenheiro.crea,
-            data_referencia: params.dataGeracao
-        });
-
+    static async gerarPGRConsolidado(dados: any): Promise<PGRConsolidadoJSON> {
         const prompt = this.replacePlaceholders(CONSOLIDATED_PROMPT, {
-            empresaNome: params.empresa.razaoSocial,
-            cnpj: params.empresa.cnpj,
-            cnae: params.empresa.cnae,
-            cnaeDescricao: params.empresa.cnaeDescricao,
-            grauRiscoNr4: params.empresa.grauRiscoNr4,
-            endereco: params.empresa.endereco,
-            municipio: params.empresa.municipio,
-            estado: params.empresa.estado,
-            cep: params.empresa.cep,
-            telefone: params.empresa.telefone,
-            totalFuncionarios: params.empresa.totalFuncionarios,
-            horarioTrabalho: params.empresa.horarioTrabalho,
-            engenheiroNome: params.empresa.engenheiro.nome,
-            creaEngenheiro: params.empresa.engenheiro.crea,
-            contatoEngenheiro: params.empresa.engenheiro.contato,
-            empresaElaboradora: params.empresa.empresaElaboradora,
-            dataGeracao: params.dataGeracao,
-            vigenciaInicio: params.vigencia.inicio,
-            vigenciaFim: params.vigencia.fim,
-            periodoColeta: `${params.periodoColeta.inicio} a ${params.periodoColeta.fim}`,
-            totalRespondentes: params.totalRespondentes,
-            ghesListaJson: params.ghes,
-            analisesConsolidadasJson: params.analisesPorGhe
+            ...dados,
+            ghesListaJson: JSON.stringify(dados.ghes, null, 2),
+            analisesConsolidadasJson: JSON.stringify(dados.analisesPorGhe, null, 2)
         });
 
-        return await this.callWithRetry(prompt, systemInstruction, 0.3, 32000);
+        const systemInstruction = "Você é um Engenheiro de Segurança do Trabalho especialista em riscos psicossociais (NR-01). Sua tarefa é gerar um relatório técnico consolidado seguindo rigorosamente o esquema JSON fornecido.";
+
+        return await this.callWithRetry(prompt, systemInstruction);
     }
 }
