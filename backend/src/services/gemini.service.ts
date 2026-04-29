@@ -52,7 +52,7 @@ export class GeminiService {
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                 }
 
-                console.log(`[Gemini] Chamando API v1 (${GEMINI_MODEL})`);
+                console.log(`[Gemini] Chamando API v1beta (${GEMINI_MODEL})`);
                 const response = await fetch(GEMINI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -64,7 +64,8 @@ export class GeminiService {
                         }],
                         generationConfig: {
                             temperature,
-                            maxOutputTokens: maxTokens
+                            maxOutputTokens: maxTokens,
+                            responseMimeType: "application/json"
                         }
                     })
                 });
@@ -75,9 +76,17 @@ export class GeminiService {
                     throw new Error(data.error?.message || 'Erro na API do Gemini');
                 }
 
-                const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                return JSON.parse(cleanJson);
+                let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                
+                // Limpeza ultra-robusta de JSON
+                // Tenta encontrar o primeiro '{' e o último '}'
+                const firstBrace = text.indexOf('{');
+                const lastBrace = text.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1) {
+                    text = text.substring(firstBrace, lastBrace + 1);
+                }
+
+                return JSON.parse(text);
 
             } catch (error: any) {
                 lastError = error;
