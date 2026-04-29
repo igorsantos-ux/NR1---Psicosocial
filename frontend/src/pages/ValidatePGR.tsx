@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { FileCheck, FileX, Download, CheckCircle2, AlertCircle, Eye, FileText, ChevronLeft, BarChart3, TrendingUp, Info } from 'lucide-react';
+import { FileCheck, FileX, Download, CheckCircle2, AlertCircle, Eye, FileText, ChevronLeft, BarChart3, TrendingUp, Info, Zap } from 'lucide-react';
 import api from '../api/api';
 import Toast from '../components/Toast';
 
