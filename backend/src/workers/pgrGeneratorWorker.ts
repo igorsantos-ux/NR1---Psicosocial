@@ -69,32 +69,38 @@ export async function processarGeracaoPGR(pgrId: string) {
             fim: new Date(Math.max(...datas)).toLocaleDateString('pt-BR')
         };
 
-        // 2. Chamar Gemini
-        log('🤖 Chamando Gemini para análise consolidada...');
-        const jsonGerado = await GeminiService.gerarPGRConsolidado({
-            empresa,
-            ghes: empresa.ghes.map((g: GHEWithRelations) => ({
-                codigo: g.codigo,
-                nome: g.nome,
-                total_colaboradores: g.cargos.reduce((acc: number, c: Cargo) => acc + c.quantidade, 0)
-            })),
-            analisesPorGhe,
-            periodoColeta,
-            totalRespondentes: empresa.respostas.length,
-            dataGeracao: new Date().toLocaleDateString('pt-BR'),
-            vigencia: {
-                inicio: new Date().toLocaleDateString('pt-BR'),
-                fim: new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toLocaleDateString('pt-BR')
-            }
-        });
-        log('✅ Gemini retornou JSON', { tamanho: JSON.stringify(jsonGerado).length });
+        // 2. Chamar Gemini (ou reutilizar cache)
+        let jsonGerado: any = pgr.jsonGerado;
 
-        // 3. Salvar JSON gerado
-        await prisma.pgr.update({
-            where: { id: pgrId },
-            data: { jsonGerado: jsonGerado as any }
-        });
-        log('💾 JSON salvo no banco');
+        if (!jsonGerado) {
+            log('🤖 Chamando Gemini para análise consolidada...');
+            jsonGerado = await GeminiService.gerarPGRConsolidado({
+                empresa,
+                ghes: empresa.ghes.map((g: GHEWithRelations) => ({
+                    codigo: g.codigo,
+                    nome: g.nome,
+                    total_colaboradores: g.cargos.reduce((acc: number, c: Cargo) => acc + c.quantidade, 0)
+                })),
+                analisesPorGhe,
+                periodoColeta,
+                totalRespondentes: empresa.respostas.length,
+                dataGeracao: new Date().toLocaleDateString('pt-BR'),
+                vigencia: {
+                    inicio: new Date().toLocaleDateString('pt-BR'),
+                    fim: new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toLocaleDateString('pt-BR')
+                }
+            });
+            log('✅ Gemini retornou JSON', { tamanho: JSON.stringify(jsonGerado).length });
+
+            // 3. Salvar JSON gerado imediatamente para cache
+            await prisma.pgr.update({
+                where: { id: pgrId },
+                data: { jsonGerado: jsonGerado as any }
+            });
+            log('💾 JSON salvo no banco (Cache ativado)');
+        } else {
+            log('♻️ Reutilizando análise da IA existente no banco (Economia de cota)');
+        }
 
         // 4. Preencher template DOCX
         log('📄 Preenchendo template DOCX...');
