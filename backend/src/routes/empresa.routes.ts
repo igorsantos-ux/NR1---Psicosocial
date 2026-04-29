@@ -117,14 +117,56 @@ export async function empresaRoutes(fastify: FastifyInstance) {
         });
     });
 
-    fastify.get('/', async () => {
-        return await prisma.empresa.findMany({
+    fastify.get('/', async (request) => {
+        const { status, search } = request.query as { status?: string, search?: string };
+        const agora = new Date();
+
+        let where: any = {};
+
+        if (search) {
+            where.OR = [
+                { razaoSocial: { contains: search, mode: 'insensitive' } },
+                { cnpj: { contains: search, mode: 'insensitive' } }
+            ];
+        }
+
+        const empresas = await prisma.empresa.findMany({
+            where,
             include: {
-                _count: {
-                    select: { respostas: true }
-                }
-            }
+                _count: { select: { respostas: true } },
+                pgrs: { orderBy: { geradoEm: 'desc' }, take: 1 }
+            },
+            orderBy: { criadoEm: 'desc' }
         });
+
+        const mapped = empresas.map(e => {
+            let statusCalculado = e.statusColeta;
+            if (e.statusColeta === 'ATIVA' && e.dataExpiracaoLink <= agora) {
+                statusCalculado = 'EXPIRADA';
+            }
+            
+            const ultimoPgr = e.pgrs[0];
+            let statusGeral: string = statusCalculado;
+            
+            if (ultimoPgr) {
+                if (ultimoPgr.status === 'GERANDO') statusGeral = 'GERANDO';
+                else if (ultimoPgr.status === 'AGUARDANDO_VALIDACAO') statusGeral = 'AGUARDANDO_VALIDACAO';
+                else if (ultimoPgr.status === 'VALIDADO') statusGeral = 'FINALIZADO';
+            }
+
+            return {
+                ...e,
+                statusColeta: statusCalculado,
+                statusGeral: statusGeral,
+                totalRespostas: e._count.respostas
+            };
+        });
+
+        if (status && status !== 'todas') {
+            return mapped.filter(e => e.statusGeral.toLowerCase() === status.toLowerCase());
+        }
+
+        return mapped;
     });
 
     fastify.get('/:id', async (request, reply) => {
@@ -134,11 +176,16 @@ export async function empresaRoutes(fastify: FastifyInstance) {
             include: {
                 ghes: {
                     include: {
-                        cargos: true
+                        cargos: true,
+                        respostas: true
                     }
                 },
-                _count: {
-                    select: { respostas: true }
+                respostas: {
+                    orderBy: { criadaEm: 'desc' },
+                    take: 20
+                },
+                pgrs: {
+                    orderBy: { geradoEm: 'desc' }
                 }
             }
         });

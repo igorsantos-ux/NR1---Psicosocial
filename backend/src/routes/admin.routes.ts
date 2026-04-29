@@ -19,94 +19,38 @@ export async function adminRoutes(fastify: FastifyInstance) {
         return { ativas, expiradas, finalizadas };
     });
 
-    // GET /api/empresas - Listagem com filtros
-    fastify.get('/empresas', async (request) => {
-        const { status, search } = request.query as { status?: string, search?: string };
-        const agora = new Date();
-
-        let where: any = {};
-
-        if (search) {
-            where.OR = [
-                { razaoSocial: { contains: search, mode: 'insensitive' } },
-                { cnpj: { contains: search, mode: 'insensitive' } }
-            ];
-        }
-
-        const empresas = await prisma.empresa.findMany({
-            where,
+    // Rotas legadas/compatibilidade que o dashboard já usava
+    fastify.get('/assessments', async () => {
+        const respostas = await prisma.respostaQuestionario.findMany({
             include: {
-                _count: { select: { respostas: true } },
-                pgrs: { orderBy: { geradoEm: 'desc' }, take: 1 }
+                empresa: { select: { nomeFantasia: true, razaoSocial: true } },
+                ghe: { select: { nome: true } }
             },
+            orderBy: { criadaEm: 'desc' }
+        });
+        return respostas.map(r => ({ ...r, status: r.processada ? 'VALIDATED' : 'PENDING' }));
+    });
+
+    fastify.get('/companies', async () => {
+        return await prisma.empresa.findMany({
+            include: { _count: { select: { respostas: true } } },
             orderBy: { criadoEm: 'desc' }
         });
-
-        // Mapeamento e Filtro de Status Manual (devido à lógica de data de expiração)
-        const mapped = empresas.map(e => {
-            let statusCalculado = e.statusColeta;
-            if (e.statusColeta === 'ATIVA' && e.dataExpiracaoLink <= agora) {
-                statusCalculado = 'EXPIRADA';
-            }
-            
-            const ultimoPgr = e.pgrs[0];
-            let statusGeral: string = statusCalculado; // Tipado como string para aceitar estados do PGR
-            
-            if (ultimoPgr) {
-                if (ultimoPgr.status === 'GERANDO') statusGeral = 'GERANDO';
-                else if (ultimoPgr.status === 'AGUARDANDO_VALIDACAO') statusGeral = 'AGUARDANDO_VALIDACAO';
-                else if (ultimoPgr.status === 'VALIDADO') statusGeral = 'FINALIZADO';
-            }
-
-            return {
-                id: e.id,
-                razaoSocial: e.razaoSocial,
-                nomeFantasia: e.nomeFantasia,
-                cnpj: e.cnpj,
-                grauRiscoNr4: e.grauRiscoNr4,
-                totalFuncionarios: e.totalFuncionarios,
-                statusColeta: statusCalculado,
-                statusPgr: ultimoPgr?.status || null,
-                statusGeral: statusGeral,
-                dataExpiracaoLink: e.dataExpiracaoLink,
-                totalRespostas: e._count.respostas,
-                tokenColeta: e.tokenColeta
-            };
-        });
-
-        if (status && status !== 'todas') {
-            return mapped.filter(e => e.statusGeral.toLowerCase() === status.toLowerCase());
-        }
-
-        return mapped;
     });
 
-    // GET /api/empresas/:id - Detalhes completos
-    fastify.get('/empresas/:id', async (request, reply) => {
-        const { id } = request.params as { id: string };
-        const empresa = await prisma.empresa.findUnique({
-            where: { id },
+    fastify.get('/ghes', async () => {
+        return await prisma.gHE.findMany({
             include: {
-                ghes: {
-                    include: {
-                        cargos: true,
-                        respostas: true
-                    }
-                },
-                respostas: {
-                    orderBy: { criadaEm: 'desc' },
-                    take: 20
-                },
-                pgrs: {
-                    orderBy: { geradoEm: 'desc' }
-                }
+                empresa: { select: { nomeFantasia: true, razaoSocial: true } },
+                cargos: true
             }
         });
-
-        if (!empresa) return reply.status(404).send({ message: 'Empresa não encontrada' });
-
-        return empresa;
     });
+
+    fastify.get('/engineer', async () => {
+        return await prisma.engenheiro.findFirst();
+    });
+}
 
     // PATCH /api/empresas/:id/estender-prazo
     fastify.patch('/empresas/:id/estender-prazo', async (request, reply) => {
