@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, Factory, RefreshCw } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Search, Filter, Factory, RefreshCw, ClipboardList, CheckCircle2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import api from '../../../api/api';
 import Toast from '../../../components/Toast';
@@ -9,15 +9,20 @@ import MetricasCards from './components/MetricasCards';
 import CardEmpresa from './components/CardEmpresa';
 
 export default function ListaEmpresas() {
+  const navigate = useNavigate();
   const [empresas, setEmpresas] = useState<any[]>([]);
   const [metricas, setMetricas] = useState({ ativas: 0, expiradas: 0, finalizadas: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('todas');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
+  
+  // Estados para o Modal de Geração
+  const [generatingPgr, setGeneratingPgr] = useState(false);
+  const [pgrProgress, setPgrProgress] = useState({ step: 0, status: 'idle' });
+  const [currentPgrId, setCurrentPgrId] = useState<string | null>(null);
 
   const fetchData = async () => {
-    setLoading(true);
     try {
       const [resEmpresas, resMetricas] = await Promise.all([
         api.get('/empresas', { params: { status: filter, search } }),
@@ -27,7 +32,6 @@ export default function ListaEmpresas() {
       setMetricas(resMetricas.data);
     } catch (error) {
       console.error(error);
-      setToast({ show: true, message: 'Erro ao carregar dados.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -37,15 +41,50 @@ export default function ListaEmpresas() {
     fetchData();
   }, [filter]);
 
-  // Polling para atualizar status de geração
+  // Polling Geral da Lista
   useEffect(() => {
     const hasProcessing = empresas.some(e => e.statusGeral === 'GERANDO');
-    
-    if (hasProcessing) {
+    if (hasProcessing && !generatingPgr) {
       const interval = setInterval(fetchData, 5000);
       return () => clearInterval(interval);
     }
-  }, [empresas]);
+  }, [empresas, generatingPgr]);
+
+  // Polling Específico do Modal de Geração
+  useEffect(() => {
+    let interval: any;
+    if (generatingPgr && currentPgrId) {
+      interval = setInterval(async () => {
+        try {
+          const res = await api.get(`/pgr/${currentPgrId}/status`);
+          const { status, observacoesEngenheiro } = res.data;
+
+          if (status === 'AGUARDANDO_VALIDACAO') {
+            setPgrProgress({ step: 4, status: 'Pronto!' });
+            clearInterval(interval);
+            setTimeout(() => {
+              navigate(`/admin/pgr/${currentPgrId}/validar`);
+            }, 1000);
+          } else if (status === 'REPROVADO') {
+            clearInterval(interval);
+            setGeneratingPgr(false);
+            setToast({ show: true, message: `Erro: ${observacoesEngenheiro}`, type: 'error' });
+          } else {
+            // Evolução visual das etapas
+            setPgrProgress(prev => {
+              if (prev.step === 1) return { step: 2, status: 'Processando análise da IA...' };
+              if (prev.step === 2) return { step: 3, status: 'Preenchendo documento...' };
+              if (prev.step === 3) return { step: 4, status: 'Convertendo para PDF...' };
+              return prev;
+            });
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [generatingPgr, currentPgrId]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,19 +98,21 @@ export default function ListaEmpresas() {
   };
 
   const handleGeneratePGR = async (id: string) => {
+    setGeneratingPgr(true);
+    setPgrProgress({ step: 1, status: 'Consolidando respostas...' });
+    
     try {
-      await api.post(`/pgr/gerar`, { empresaId: id });
-      setToast({ show: true, message: 'Geração do PGR iniciada!', type: 'success' });
-      fetchData();
-    } catch (error) {
-      setToast({ show: true, message: 'Erro ao iniciar geração do PGR.', type: 'error' });
+      const res = await api.post(`/pgr/gerar`, { empresaId: id });
+      setCurrentPgrId(res.data.pgrId);
+    } catch (error: any) {
+      setGeneratingPgr(false);
+      setToast({ show: true, message: error.response?.data?.message || 'Erro ao iniciar geração.', type: 'error' });
     }
   };
 
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-clinicfy-dark">Empresas Cadastradas</h1>
@@ -85,10 +126,8 @@ export default function ListaEmpresas() {
           </Link>
         </div>
 
-        {/* Métricas */}
         <MetricasCards metricas={metricas} />
 
-        {/* Filtros */}
         <div className="bg-white rounded-3xl p-4 mt-8 border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
           <form onSubmit={handleSearch} className="relative flex-1 w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -120,13 +159,11 @@ export default function ListaEmpresas() {
           <button 
             onClick={fetchData}
             className="p-3 rounded-xl bg-gray-50 text-gray-400 hover:text-clinicfy-teal transition-colors"
-            title="Atualizar Lista"
           >
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
 
-        {/* Lista de Empresas */}
         <div className="mt-6 space-y-4">
           <AnimatePresence mode="popLayout">
             {loading && empresas.length === 0 ? (
@@ -153,12 +190,63 @@ export default function ListaEmpresas() {
                   <Factory size={40} />
                 </div>
                 <h3 className="text-gray-500 font-bold">Nenhuma empresa encontrada</h3>
-                <p className="text-gray-400 text-sm mt-1">Tente ajustar seus filtros ou cadastre uma nova empresa.</p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Modal de Progresso de Geração */}
+      <AnimatePresence>
+        {generatingPgr && (
+          <div className="fixed inset-0 bg-clinicfy-dark/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[40px] p-10 max-w-md w-full shadow-2xl text-center space-y-6"
+            >
+              <div className="relative w-24 h-24 mx-auto">
+                <div className="absolute inset-0 border-4 border-clinicfy-teal/20 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-clinicfy-teal rounded-full border-t-transparent animate-spin" style={{ animationDuration: '1.5s' }}></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <ClipboardList size={32} className="text-clinicfy-teal animate-pulse" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-clinicfy-dark">Gerando PGR Consolidado</h3>
+                <p className="text-sm text-gray-500">A IA está processando as respostas. Por favor, aguarde.</p>
+              </div>
+
+              <div className="space-y-4 text-left">
+                {[
+                  { step: 1, label: 'Consolidando respostas...' },
+                  { step: 2, label: 'Processando análise da IA...' },
+                  { step: 3, label: 'Preenchendo documento...' },
+                  { step: 4, label: 'Convertendo para PDF...' },
+                ].map((s) => (
+                  <div key={s.step} className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${pgrProgress.step >= s.step ? 'bg-clinicfy-teal text-white' : 'bg-gray-100 text-gray-400'}`}>
+                      {pgrProgress.step > s.step ? <CheckCircle2 size={12} /> : s.step}
+                    </div>
+                    <span className={`text-sm font-medium ${pgrProgress.step === s.step ? 'text-clinicfy-teal' : pgrProgress.step > s.step ? 'text-clinicfy-dark' : 'text-gray-300'}`}>
+                      {s.label}
+                    </span>
+                    {pgrProgress.step === s.step && (
+                      <span className="ml-auto flex gap-1">
+                        <span className="w-1 h-1 bg-clinicfy-teal rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                        <span className="w-1 h-1 bg-clinicfy-teal rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                        <span className="w-1 h-1 bg-clinicfy-teal rounded-full animate-bounce"></span>
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <Toast
         show={toast.show}

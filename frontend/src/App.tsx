@@ -69,7 +69,7 @@ function App() {
           <Route path="/admin/settings" element={<Settings />} />
 
           {/* Validação de PGR */}
-          <Route path="/pgr/:id/validar" element={<ValidatePGR />} />
+          <Route path="/admin/pgr/:id/validar" element={<ValidatePGR />} />
 
           {/* Redirecionamento Padrão */}
           <Route path="/" element={<Navigate to="/admin/companies" />} />

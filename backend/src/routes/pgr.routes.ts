@@ -104,4 +104,33 @@ export async function pgrRoutes(fastify: FastifyInstance) {
 
         return pgr;
     });
+
+    fastify.get('/', async (request) => {
+        const { status, empresaId } = request.query as { status?: string, empresaId?: string };
+        
+        const where: any = {};
+        if (status && status !== 'todos') where.status = status;
+        if (empresaId) where.empresaId = empresaId;
+        
+        const pgrs = await prisma.pgr.findMany({
+            where,
+            include: {
+                empresa: {
+                    select: { id: true, razaoSocial: true, cnpj: true }
+                }
+            },
+            orderBy: { geradoEm: 'desc' }
+        });
+        
+        return pgrs.map(pgr => ({
+            id: pgr.id,
+            empresa: pgr.empresa,
+            status: pgr.status,
+            geradoEm: pgr.geradoEm,
+            validadoEm: pgr.validadoEm,
+            temDocx: !!pgr.caminhoDocx,
+            temPdf: !!pgr.caminhoPdf,
+            resumo: (pgr.jsonGerado as any)?.resumo_executivo || null
+        }));
+    });
 }
