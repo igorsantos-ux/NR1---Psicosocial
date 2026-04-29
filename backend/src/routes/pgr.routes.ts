@@ -9,8 +9,8 @@ export async function pgrRoutes(fastify: FastifyInstance) {
     // POST /api/empresas/:id/gerar-pgr (registrado como sub-rota ou aqui direto)
     // Vou usar o prefixo /api/pgr para simplificar o roteamento
 
-    fastify.post('/gerar/:empresaId', async (request, reply) => {
-        const { empresaId } = request.params as { empresaId: string };
+    fastify.post('/gerar', async (request, reply) => {
+        const { empresaId } = request.body as { empresaId: string };
 
         const empresa = await prisma.empresa.findUnique({
             where: { id: empresaId },
