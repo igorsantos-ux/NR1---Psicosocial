@@ -57,6 +57,7 @@ export class GeminiService {
 
         while (attempt < maxRetries) {
             try {
+                console.log(`[Gemini] Chamando API: ${GEMINI_URL.replace(GEMINI_API_KEY, '***')}`);
                 const response = await fetch(GEMINI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
