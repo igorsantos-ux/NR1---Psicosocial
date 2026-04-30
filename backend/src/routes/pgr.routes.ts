@@ -122,6 +122,32 @@ export async function pgrRoutes(fastify: FastifyInstance) {
         return pgr;
     });
 
+    fastify.post('/:id/regenerar', async (request, reply) => {
+        const { id } = request.params as { id: string };
+
+        const pgrExistente = await prisma.pgr.findUnique({ where: { id } });
+        if (!pgrExistente) return reply.status(404).send({ message: 'PGR não encontrado' });
+
+        // Resetar status para GERANDO e limpar erros anteriores
+        const pgr = await prisma.pgr.update({
+            where: { id },
+            data: {
+                status: 'GERANDO',
+                observacoesEngenheiro: null,
+                // Limpamos o jsonGerado para forçar o Gemini a reanalisar (Modo gas/nitro ativado anteriormente)
+                jsonGerado: {}
+            }
+        });
+
+        // Disparar worker
+        const { processarGeracaoPGR } = await import('../workers/pgrGeneratorWorker.js');
+        processarGeracaoPGR(pgr.id).catch((err: Error) => {
+            console.error(`Erro ao regenerar PGR ${pgr.id}:`, err);
+        });
+
+        return { success: true, status: pgr.status };
+    });
+
     fastify.get('/', async (request) => {
         const { status, empresaId } = request.query as { status?: string, empresaId?: string };
         
@@ -147,6 +173,9 @@ export async function pgrRoutes(fastify: FastifyInstance) {
             validadoEm: pgr.validadoEm,
             temDocx: !!pgr.caminhoDocx,
             temPdf: !!pgr.caminhoPdf,
+            erroDetalhes: (pgr.status === 'REPROVADO' || pgr.status === 'ERRO') 
+                ? pgr.observacoesEngenheiro?.split('\n\nStack:')[0]?.replace('ERRO AUTOMÁTICO: Error: ', '') 
+                : null,
             resumo: (pgr.jsonGerado as any)?.resumo_executivo?.parecer_sintetico || null
         }));
     });
