@@ -63,8 +63,10 @@ export default function ActionPlans() {
       return 'O template Word (PGR-MODELO.docx) possui tags inválidas ou corrompidas. Verifique as chaves {empresa...}.';
     if (e.includes('quota') || e.includes('429')) 
       return 'Limite da IA atingido. O sistema tentará novamente em breve ou você pode tentar agora.';
-    if (e.includes('not found') || e.includes('gemini-1.5') || e.includes('gemini-2.0'))
-      return 'Versão da IA desatualizada. Por favor, solicite a atualização para o Gemini 2.5 Flash no painel.';
+    if (e.includes('not found')) 
+      return 'O modelo de IA configurado não foi encontrado ou está em manutenção. Por favor, tente regenerar em alguns minutos.';
+    if (e.includes('gemini-1.5') || e.includes('gemini-2.0') || e.includes('gemini-2.5') || e.includes('gemini-3'))
+      return 'Houve uma instabilidade na versão da IA selecionada. Tente regenerar o laudo.';
     if (e.includes('enoent') || e.includes('no such file'))
       return 'Falha ao acessar os arquivos de sistema. Verifique as permissões da pasta output.';
     if (e.includes('libreoffice') || e.includes('convert-to pdf'))
