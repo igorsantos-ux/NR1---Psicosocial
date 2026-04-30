@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import Layout from '../components/Layout';
-import { Building2, FileText, Hash, Layers, Plus, Trash2, Link as LinkIcon, Copy, CheckCircle2, MapPin, Phone, Users, Clock, Briefcase } from 'lucide-react';
+import { 
+  Building2, FileText, Hash, Layers, Plus, Trash2, 
+  Link as LinkIcon, Copy, CheckCircle2, MapPin, Phone, 
+  Users, Clock, Briefcase, RefreshCw, AlertCircle
+} from 'lucide-react';
 import api from '../api/api';
 import Toast from '../components/Toast';
+import { useCNPJ } from '../hooks/useCNPJ';
 
 interface GHE {
   id: string;
@@ -31,6 +36,44 @@ export default function RegisterCompany() {
     empresaElaboradora: 'PGR Smart Engenharia',
     engenheiroId: 'fb098935-d227-4638-89c0-63ceba51532f' // ID fixo para desenvolvimento/Denis
   });
+
+  const [autoPreenchido, setAutoPreenchido] = useState<Record<string, boolean>>({});
+  const { buscarCNPJ, loading: loadingCNPJ, erro: erroCNPJ } = useCNPJ();
+
+  const handleCNPJBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const cnpj = e.target.value;
+    if (!cnpj || cnpj.replace(/\D/g, '').length < 14) return;
+
+    const dados = await buscarCNPJ(cnpj);
+    if (!dados) return;
+
+    setFormData(prev => ({
+      ...prev,
+      razaoSocial: dados.razaoSocial,
+      nomeFantasia: dados.nomeFantasia,
+      cnae: dados.cnae,
+      cnaeDescricao: dados.cnaeDescricao,
+      endereco: dados.endereco,
+      municipio: dados.municipio,
+      estado: dados.estado,
+      cep: dados.cep,
+      telefone: dados.telefone,
+    }));
+
+    setAutoPreenchido({
+      razaoSocial: !!dados.razaoSocial,
+      nomeFantasia: !!dados.nomeFantasia,
+      cnae: !!dados.cnae,
+      cnaeDescricao: !!dados.cnaeDescricao,
+      endereco: !!dados.endereco,
+      municipio: !!dados.municipio,
+      estado: !!dados.estado,
+      cep: !!dados.cep,
+      telefone: !!dados.telefone,
+    });
+
+    setToast({ show: true, message: 'Dados preenchidos via Receita Federal!', type: 'success' });
+  };
 
   const [ghes, setGhes] = useState<GHE[]>([]);
   const [newGheNome, setNewGheNome] = useState('');
@@ -144,7 +187,10 @@ export default function RegisterCompany() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Razão Social</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      Razão Social
+                      {autoPreenchido.razaoSocial && <span className="text-[10px] text-clinicfy-teal font-black lowercase">✓ receita federal</span>}
+                    </label>
                     <div className="relative">
                       <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                       <input
@@ -159,7 +205,10 @@ export default function RegisterCompany() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nome Fantasia</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      Nome Fantasia
+                      {autoPreenchido.nomeFantasia && <span className="text-[10px] text-clinicfy-teal font-black lowercase">✓ receita federal</span>}
+                    </label>
                     <input
                       type="text"
                       placeholder="Ex: Maravilha Linguiças"
@@ -170,22 +219,43 @@ export default function RegisterCompany() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">CNPJ</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      CNPJ
+                      {loadingCNPJ && <RefreshCw size={12} className="animate-spin text-clinicfy-teal" />}
+                      {!loadingCNPJ && formData.razaoSocial && !erroCNPJ && <CheckCircle2 size={12} className="text-emerald-500" />}
+                    </label>
                     <div className="relative">
                       <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                       <input
                         required
                         type="text"
                         placeholder="00.000.000/0000-00"
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinicfy-teal/20 transition-all"
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 transition-all ${
+                          erroCNPJ ? 'border-amber-200 ring-amber-50' : 'border-gray-100 focus:ring-clinicfy-teal/20'
+                        }`}
                         value={formData.cnpj}
-                        onChange={e => setFormData({ ...formData, cnpj: e.target.value })}
+                        onChange={e => {
+                          const v = e.target.value
+                            .replace(/\D/g, '')
+                            .replace(/^(\d{2})(\d)/, '$1.$2')
+                            .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                            .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                            .replace(/(\d{4})(\d)/, '$1-$2')
+                            .slice(0, 18);
+                          setFormData({ ...formData, cnpj: v });
+                        }}
+                        onBlur={handleCNPJBlur}
                       />
                     </div>
+                    {erroCNPJ && <p className="text-[10px] text-amber-600 font-bold ml-1 flex items-center gap-1"><AlertCircle size={10} /> {erroCNPJ}</p>}
+                    {!formData.cnpj && <p className="text-[9px] text-gray-400 italic ml-1">Preencha para buscar dados automaticamente</p>}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">CNAE</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      CNAE
+                      {autoPreenchido.cnae && <span className="text-[10px] text-clinicfy-teal font-black lowercase">✓ receita federal</span>}
+                    </label>
                     <div className="relative">
                       <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                       <input
@@ -199,7 +269,10 @@ export default function RegisterCompany() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Descrição CNAE</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      Descrição CNAE
+                      {autoPreenchido.cnaeDescricao && <span className="text-[10px] text-clinicfy-teal font-black lowercase">✓ receita federal</span>}
+                    </label>
                     <input
                       type="text"
                       placeholder="Ex: Fabricação de produtos de carne"
@@ -263,7 +336,10 @@ export default function RegisterCompany() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2 space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Endereço Completo</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      Endereço Completo
+                      {autoPreenchido.endereco && <span className="text-[10px] text-clinicfy-teal font-black lowercase">✓ receita federal</span>}
+                    </label>
                     <div className="relative">
                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                       <input
@@ -277,7 +353,10 @@ export default function RegisterCompany() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Município</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      Município
+                      {autoPreenchido.municipio && <span className="text-[10px] text-clinicfy-teal font-black lowercase">✓ receita federal</span>}
+                    </label>
                     <input
                       type="text"
                       placeholder="Ex: Chapecó"
@@ -288,7 +367,10 @@ export default function RegisterCompany() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Estado</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      Estado
+                      {autoPreenchido.estado && <span className="text-[10px] text-clinicfy-teal font-black lowercase">✓ receita federal</span>}
+                    </label>
                     <select
                       className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinicfy-teal/20 appearance-none transition-all"
                       value={formData.estado}
@@ -300,7 +382,10 @@ export default function RegisterCompany() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">CEP</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      CEP
+                      {autoPreenchido.cep && <span className="text-[10px] text-clinicfy-teal font-black lowercase">✓ receita federal</span>}
+                    </label>
                     <input
                       type="text"
                       placeholder="00000-000"
@@ -311,7 +396,10 @@ export default function RegisterCompany() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Telefone</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center gap-2">
+                      Telefone
+                      {autoPreenchido.telefone && <span className="text-[10px] text-clinicfy-teal font-black lowercase">✓ receita federal</span>}
+                    </label>
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                       <input
