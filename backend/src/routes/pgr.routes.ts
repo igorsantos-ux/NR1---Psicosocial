@@ -173,7 +173,7 @@ export async function pgrRoutes(fastify: FastifyInstance) {
             validadoEm: pgr.validadoEm,
             temDocx: !!pgr.caminhoDocx,
             temPdf: !!pgr.caminhoPdf,
-            erroDetalhes: (pgr.status === 'REPROVADO' || pgr.status === 'ERRO') 
+            erroDetalhes: pgr.status === 'REPROVADO' 
                 ? pgr.observacoesEngenheiro?.split('\n\nStack:')[0]?.replace('ERRO AUTOMÁTICO: Error: ', '') 
                 : null,
             resumo: (pgr.jsonGerado as any)?.resumo_executivo?.parecer_sintetico || null
