@@ -107,7 +107,26 @@ export async function pgrRoutes(fastify: FastifyInstance) {
 
     fastify.post('/:id/validar', async (request, reply) => {
         const { id } = request.params as { id: string };
-        const { observacoes, validadoPor } = request.body as { observacoes?: string, validadoPor: string };
+        const { approved, observacoes, validadoPor } = request.body as { approved: boolean, observacoes?: string, validadoPor: string };
+
+        if (!approved) {
+            // Se foi rejeitado, resetamos para processar novamente
+            const pgr = await prisma.pgr.update({
+                where: { id },
+                data: {
+                    status: 'GERANDO',
+                    observacoesEngenheiro: observacoes ?? 'Rejeitado pelo engenheiro',
+                    jsonGerado: {} // Limpa cache para forçar nova análise
+                }
+            });
+
+            const { processarGeracaoPGR } = await import('../workers/pgrGeneratorWorker.js');
+            processarGeracaoPGR(pgr.id).catch((err: Error) => {
+                console.error(`Erro ao reprocessar PGR rejeitado ${pgr.id}:`, err);
+            });
+
+            return { status: 'GERANDO', message: 'PGR rejeitado e enviado para reprocessamento.' };
+        }
 
         const pgr = await prisma.pgr.update({
             where: { id },
