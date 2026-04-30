@@ -1,34 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { 
-  ArrowLeft, Building2, MapPin, Phone, Users, Clock, Hash, 
-  ExternalLink, Copy, Share2, Mail, Zap, CheckCircle2, 
-  FileDown, Calendar, AlertCircle, RefreshCw, Layers, Edit3, History as HistoryIcon
+  ArrowLeft, Building2, MapPin, Phone, Users, Clock, 
+  FileDown, Calendar, AlertTriangle, Zap, CheckCircle2,
+  Shield, Mail, LayoutDashboard
 } from 'lucide-react';
 import Layout from '../../../components/Layout';
 import api from '../../../api/api';
 import Toast from '../../../components/Toast';
-import StatusBadge from './components/StatusBadge';
-import BarraProgresso from './components/BarraProgresso';
-import ContadorRegressivo from './components/ContadorRegressivo';
-import TimelineAtividades from './components/TimelineAtividades';
 
 export default function DetalhesEmpresa() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [empresa, setEmpresa] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
-  const [copied, setCopied] = useState(false);
 
   const fetchEmpresa = async () => {
     try {
       const res = await api.get(`/empresas/${id}`);
       setEmpresa(res.data);
-    } catch (error) {
-      setToast({ show: true, message: 'Erro ao carregar detalhes.', type: 'error' });
-    } finally {
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Empresa não encontrada');
       setLoading(false);
     }
   };
@@ -37,234 +32,250 @@ export default function DetalhesEmpresa() {
     fetchEmpresa();
   }, [id]);
 
-  const handleCopyLink = () => {
-    const url = `${window.location.origin}/q/${empresa.tokenColeta}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setToast({ show: true, message: 'Link de coleta copiado!', type: 'success' });
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleGeneratePGR = async () => {
-    try {
-      await api.post(`/pgr/gerar`, { empresaId: id });
-      setToast({ show: true, message: 'Geração do PGR iniciada!', type: 'success' });
-      fetchEmpresa();
-    } catch (error) {
-      setToast({ show: true, message: 'Erro ao gerar PGR.', type: 'error' });
-    }
-  };
-
   if (loading) return (
     <Layout>
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-        <RefreshCw size={40} className="animate-spin mb-4" />
-        <p className="font-bold animate-pulse">Carregando detalhes da empresa...</p>
+      <div className="flex flex-col items-center justify-center py-24">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-clinicfy-teal mb-4"></div>
+        <p className="text-gray-400 font-bold animate-pulse uppercase tracking-widest text-[10px]">Sincronizando dados cadastrais...</p>
       </div>
     </Layout>
   );
 
-  if (!empresa) return (
+  if (error || !empresa) return (
     <Layout>
-      <div className="text-center py-20">
-        <h2 className="text-xl font-bold">Empresa não encontrada.</h2>
-        <Link to="/admin/empresas" className="text-clinicfy-teal mt-4 block">Voltar para a lista</Link>
+      <div className="max-w-xl mx-auto py-20 text-center">
+        <div className="bg-red-50 p-8 rounded-[32px] border border-red-100">
+            <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-red-700 mb-2">Ops! Algo deu errado</h2>
+            <p className="text-red-600/70 text-sm mb-6">{error || 'Não conseguimos localizar esta empresa em nossa base de dados.'}</p>
+            <button 
+                onClick={() => navigate('/admin/empresas')}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-2xl font-bold text-xs hover:bg-red-700 transition-all shadow-lg shadow-red-200"
+            >
+                <ArrowLeft size={16} /> VOLTAR PARA LISTAGEM
+            </button>
+        </div>
       </div>
     </Layout>
   );
-
-  const publicUrl = `${window.location.origin}/q/${empresa.tokenColeta}`;
-  const totalRespostas = empresa.respostas?.length || 0;
 
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        {/* Top Header */}
-        <div className="flex items-center gap-4 mb-8">
+        {/* Header Profissional */}
+        <div className="flex items-center gap-4 mb-10">
           <button 
             onClick={() => navigate('/admin/empresas')}
-            className="p-3 rounded-2xl bg-white border border-gray-100 text-gray-400 hover:text-clinicfy-teal transition-all"
+            className="p-4 rounded-2xl bg-white border border-gray-100 text-gray-400 hover:text-clinicfy-teal hover:border-clinicfy-teal/20 transition-all shadow-sm"
           >
             <ArrowLeft size={20} />
           </button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-clinicfy-dark">{empresa.razaoSocial}</h1>
-              <StatusBadge status={empresa.statusColeta} />
+              <h1 className="text-2xl font-black text-clinicfy-dark tracking-tight uppercase">
+                {empresa?.razaoSocial ?? 'NOME NÃO INFORMADO'}
+              </h1>
+              <span className={`text-[10px] px-3 py-1 rounded-full font-black tracking-widest border ${
+                empresa?.statusColeta === 'ATIVA' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                empresa?.statusColeta === 'EXPIRADA' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                'bg-gray-50 text-gray-500 border-gray-100'
+              }`}>
+                {empresa?.statusColeta ?? 'DESCONHECIDO'}
+              </span>
             </div>
-            <p className="text-gray-500 text-sm">CNPJ: {empresa.cnpj}</p>
+            <p className="text-gray-400 text-xs font-bold mt-1">
+              CNPJ: {empresa?.cnpj ?? '—'} <span className="mx-2 text-gray-200">|</span> ID: {empresa?.id?.split('-')[0].toUpperCase()}
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* COLUNA ESQUERDA (60%) */}
-          <div className="lg:col-span-3 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Coluna Principal - Dados e GHEs */}
+          <div className="lg:col-span-2 space-y-8">
             
-            {/* Card 1 - Informações */}
+            {/* Card Dados Cadastrais */}
             <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8">
-                <button className="text-gray-400 hover:text-clinicfy-teal transition-colors">
-                  <Edit3 size={20} />
-                </button>
-              </div>
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Building2 size={14} className="text-clinicfy-teal" /> Informações da Empresa
-              </h3>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-clinicfy-teal/5 rounded-full -mr-16 -mt-16"></div>
+              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
+                <Building2 size={14} className="text-clinicfy-teal" /> Perfil Corporativo
+              </h2>
               
-              <div className="grid grid-cols-2 gap-y-6 gap-x-8">
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">CNAE</label>
-                  <p className="text-sm font-medium text-clinicfy-dark">{empresa.cnae} - {empresa.cnaeDescricao || 'Sem descrição'}</p>
+              <div className="grid grid-cols-2 gap-y-8 gap-x-12 relative z-10">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-300 uppercase tracking-widest">CNAE Principal</label>
+                  <p className="text-sm font-bold text-clinicfy-dark">{empresa?.cnae ?? '—'}</p>
+                  <p className="text-[10px] text-gray-400 leading-tight">{empresa?.cnaeDescricao ?? ''}</p>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Grau de Risco</label>
-                  <p className="text-sm font-bold text-clinicfy-teal">Nível {empresa.grauRiscoNr4}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Endereço</label>
-                  <p className="text-sm font-medium text-clinicfy-dark flex items-start gap-2">
-                    <MapPin size={16} className="text-gray-300 mt-0.5" />
-                    {empresa.endereco}, {empresa.municipio} - {empresa.estado} (CEP: {empresa.cep})
-                  </p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Telefone</label>
-                  <p className="text-sm font-medium text-clinicfy-dark flex items-center gap-2">
-                    <Phone size={16} className="text-gray-300" /> {empresa.telefone || 'Não informado'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Horário</label>
-                  <p className="text-sm font-medium text-clinicfy-dark flex items-center gap-2">
-                    <Clock size={16} className="text-gray-300" /> {empresa.horarioTrabalho || 'Comercial'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2 - Status da Coleta */}
-            <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Clock size={14} className="text-clinicfy-teal" /> Status da Coleta
-              </h3>
-              
-              <div className="flex flex-col md:flex-row gap-10 items-center">
-                <div className="flex-1 w-full space-y-6">
-                  <div className="bg-gray-50 rounded-2xl p-6">
-                    <ContadorRegressivo dataExpiracao={empresa.dataExpiracaoLink} />
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <BarraProgresso atual={totalRespostas} total={empresa.totalFuncionarios} />
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Grau de Risco (NR-04)</label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-clinicfy-teal text-white flex items-center justify-center font-black text-sm">
+                      {empresa?.grauRiscoNr4 ?? '0'}
                     </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <button className="flex-1 py-3 px-4 rounded-xl border border-gray-100 font-bold text-xs text-gray-500 hover:bg-gray-50 transition-all">
-                      Estender Prazo
-                    </button>
-                    <button className="flex-1 py-3 px-4 rounded-xl border border-rose-100 font-bold text-xs text-rose-500 hover:bg-rose-50 transition-all">
-                      Encerrar Coleta Agora
-                    </button>
+                    <p className="text-sm font-bold text-clinicfy-dark">Risco {empresa?.grauRiscoNr4 >= 3 ? 'Alto' : 'Baixo'}</p>
                   </div>
                 </div>
-                
-                <div className="flex flex-col items-center justify-center p-6 bg-clinicfy-teal/5 rounded-3xl border border-clinicfy-teal/10">
-                  <p className="text-4xl font-bold text-clinicfy-teal">{totalRespostas}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Respostas Totais</p>
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Localização</label>
+                  <p className="text-sm font-bold text-clinicfy-dark flex items-center gap-2">
+                    <MapPin size={16} className="text-clinicfy-teal" />
+                    {empresa?.endereco ? `${empresa.endereco}, ${empresa.municipio} - ${empresa.estado}` : 'Endereço não cadastrado'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Total de Funcionários</label>
+                  <p className="text-sm font-bold text-clinicfy-dark flex items-center gap-2">
+                    <Users size={16} className="text-clinicfy-teal" /> {empresa?.totalFuncionarios ?? 0} colaboradores
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Horário de Funcionamento</label>
+                  <p className="text-sm font-bold text-clinicfy-dark flex items-center gap-2">
+                    <Clock size={16} className="text-clinicfy-teal" /> {empresa?.horarioTrabalho ?? 'Horário comercial'}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Card 3 - GHEs */}
+            {/* Card GHEs */}
             <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Layers size={14} className="text-clinicfy-teal" /> Distribuição por GHE
-              </h3>
-              <div className="space-y-4">
-                {empresa.ghes?.map((ghe: any) => (
-                  <div key={ghe.id} className="p-4 rounded-2xl border border-gray-50 bg-gray-50/30 flex items-center justify-between">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Shield size={14} className="text-clinicfy-teal" /> Grupos Homogêneos (GHE)
+                </h2>
+                <span className="text-[10px] font-black text-clinicfy-teal bg-clinicfy-teal/5 px-3 py-1 rounded-full uppercase">
+                  {empresa?.ghes?.length ?? 0} GRUPOS
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {empresa?.ghes?.map((ghe: any) => (
+                  <div key={ghe.id} className="p-5 rounded-2xl bg-gray-50/50 border border-gray-50 flex items-center justify-between group hover:border-clinicfy-teal/20 transition-all">
                     <div>
-                      <p className="text-sm font-bold text-clinicfy-dark">{ghe.nome}</p>
-                      <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mt-0.5">{ghe.codigo}</p>
+                      <p className="text-xs font-black text-clinicfy-dark uppercase tracking-tight">{ghe.nome}</p>
+                      <p className="text-[9px] text-gray-400 font-bold tracking-widest uppercase mt-0.5">{ghe.codigo}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-clinicfy-teal">{ghe.respostas?.length || 0} respostas</p>
-                      <div className="flex gap-1 mt-1.5 justify-end">
-                        <div className="w-8 h-1.5 rounded-full bg-emerald-400 opacity-30" />
-                        <div className="w-4 h-1.5 rounded-full bg-amber-400" />
-                        <div className="w-2 h-1.5 rounded-full bg-rose-400" />
-                      </div>
+                      <p className="text-xs font-black text-clinicfy-teal">
+                        {ghe.cargos?.reduce((acc: number, c: any) => acc + c.quantidade, 0) ?? 0}
+                      </p>
+                      <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tighter">Colaboradores</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
 
-          {/* COLUNA DIREITA (40%) */}
-          <div className="lg:col-span-2 space-y-8">
+          {/* Coluna Lateral - Status, PGR e Engenheiro */}
+          <div className="space-y-8">
             
-            {/* Card Link */}
-            <div className="bg-gradient-to-br from-clinicfy-teal to-clinicfy-dark rounded-[32px] p-8 text-white shadow-xl shadow-clinicfy-teal/10">
-              <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-6">Link de Coleta</h3>
-              <div className="bg-white/10 p-4 rounded-2xl border border-white/10 mb-6 break-all">
-                <p className="text-[10px] font-mono text-white/80">{publicUrl}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <button 
-                  onClick={handleCopyLink}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-clinicfy-dark font-bold text-xs hover:bg-clinicfy-light transition-all active:scale-95"
-                >
-                  {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />} 
-                  {copied ? 'Copiado' : 'Copiar'}
-                </button>
-                <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-[#25D366] text-white font-bold text-xs hover:opacity-90 transition-all active:scale-95">
-                  <Share2 size={16} /> WhatsApp
-                </button>
-              </div>
-              <div className="bg-white p-4 rounded-2xl flex items-center justify-center">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(publicUrl)}`}
-                  alt="QR Code"
-                  className="w-32 h-32"
-                />
+            {/* Card Coleta */}
+            <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
+              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                <Zap size={14} className="text-clinicfy-pink" /> Monitoramento da Coleta
+              </h2>
+              <div className="space-y-5">
+                <div className="flex justify-between items-end">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">Respostas</span>
+                  <span className="text-sm font-black text-clinicfy-dark">{empresa?.totalRespostas ?? 0} / {empresa?.totalFuncionarios ?? 0}</span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-clinicfy-teal rounded-full transition-all duration-1000" 
+                    style={{ width: `${Math.min(100, ((empresa?.totalRespostas ?? 0) / (empresa?.totalFuncionarios ?? 1)) * 100)}%` }}
+                  ></div>
+                </div>
+                <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                    <span className="text-[9px] font-bold text-gray-400 uppercase">Data de Expiração</span>
+                    <span className="text-[10px] font-black text-clinicfy-dark">
+                        {empresa?.dataExpiracaoLink 
+                            ? new Date(empresa.dataExpiracaoLink).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                            : '—'}
+                    </span>
+                </div>
               </div>
             </div>
 
-            {/* Card Ações PGR */}
-            <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Ações do PGR</h3>
+            {/* Card Último PGR */}
+            <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm overflow-hidden relative">
+              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                <FileDown size={14} className="text-clinicfy-pink" /> Último PGR Consolidado
+              </h2>
               
-              <div className="space-y-4">
-                <button 
-                  onClick={handleGeneratePGR}
-                  className="w-full py-4 rounded-2xl bg-clinicfy-pink text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-clinicfy-pink/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                >
-                  <Zap size={20} /> Gerar PGR Consolidado
-                </button>
-                <p className="text-[10px] text-gray-400 text-center leading-relaxed px-4">
-                  Esta ação irá processar todas as respostas com IA e gerar o documento consolidado.
-                </p>
-
-                {empresa.pgrs?.length > 0 && (
-                  <div className="pt-6 mt-6 border-t border-gray-100 space-y-3">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 text-center">Último PGR Gerado</p>
-                    <button className="w-full py-3 rounded-xl bg-emerald-50 text-emerald-600 font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors">
-                      <FileDown size={16} /> Download PDF
-                    </button>
-                    <button className="w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors">
-                      <FileDown size={16} /> Download DOCX
-                    </button>
+              {empresa?.ultimoPgr ? (
+                <div className="space-y-4">
+                  <div className={`text-[9px] px-3 py-1 rounded-full font-black tracking-widest border inline-block uppercase ${
+                    empresa.ultimoPgr.status === 'AGUARDANDO_VALIDACAO' ? 'bg-clinicfy-pink/10 text-clinicfy-pink border-clinicfy-pink/20' :
+                    empresa.ultimoPgr.status === 'VALIDADO' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                    empresa.ultimoPgr.status === 'REPROVADO' ? 'bg-red-50 text-red-600 border-red-100' :
+                    'bg-gray-50 text-gray-500 border-gray-100'
+                  }`}>
+                    {empresa.ultimoPgr.status?.replace('_', ' ')}
                   </div>
-                )}
-              </div>
+
+                  {empresa.ultimoPgr.erroDetalhes && (
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-2xl space-y-1">
+                      <p className="text-[10px] font-black text-red-700 uppercase">Erro Identificado</p>
+                      <p className="text-[11px] text-red-600 font-medium leading-tight">{empresa.ultimoPgr.erroDetalhes}</p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-2">
+                    {empresa.ultimoPgr.temPdf && (
+                      <a 
+                        href={`${import.meta.env.VITE_API_URL || ''}/api/pgr/${empresa.ultimoPgr.id}/download/pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-red-500 text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-all shadow-lg shadow-red-200"
+                      >
+                        <FileDown size={16} /> DOWNLOAD PDF
+                      </a>
+                    )}
+                    {empresa.ultimoPgr.temDocx && (
+                      <a 
+                        href={`${import.meta.env.VITE_API_URL || ''}/api/pgr/${empresa.ultimoPgr.id}/download/docx`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-blue-500 text-white rounded-xl font-bold text-xs hover:bg-blue-600 transition-all shadow-lg shadow-blue-200"
+                      >
+                        <FileDown size={16} /> DOWNLOAD DOCX
+                      </a>
+                    )}
+                    {empresa.ultimoPgr.status === 'AGUARDANDO_VALIDACAO' && (
+                      <button 
+                        onClick={() => navigate(`/admin/pgr/${empresa.ultimoPgr.id}/validar`)}
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-clinicfy-pink text-white rounded-xl font-bold text-xs hover:opacity-90 transition-all shadow-lg shadow-clinicfy-pink/20"
+                      >
+                        <Zap size={16} /> VALIDAR PGR AGORA
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 text-center">
+                    <p className="text-xs text-gray-400 font-medium italic">Nenhum laudo gerado para esta empresa.</p>
+                </div>
+              )}
             </div>
 
-            {/* Histórico */}
+            {/* Card Engenheiro */}
             <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <HistoryIcon size={14} className="text-clinicfy-teal" /> Histórico de Atividades
-              </h3>
-              <TimelineAtividades atividades={empresa.respostas || []} />
+              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-clinicfy-teal" /> Responsável Técnico
+              </h2>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-clinicfy-teal/10 flex items-center justify-center text-clinicfy-teal font-black text-lg">
+                    {empresa?.engenheiro?.nome?.charAt(0) ?? 'E'}
+                </div>
+                <div>
+                    <p className="text-xs font-black text-clinicfy-dark uppercase tracking-tight">{empresa?.engenheiro?.nome ?? 'NÃO ATRIBUÍDO'}</p>
+                    <p className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+                        <Mail size={12} /> {empresa?.engenheiro?.email ?? ''}
+                    </p>
+                </div>
+              </div>
             </div>
 
           </div>

@@ -177,21 +177,51 @@ export async function empresaRoutes(fastify: FastifyInstance) {
             include: {
                 ghes: {
                     include: {
-                        cargos: true,
-                        respostas: true
+                        cargos: true
                     }
                 },
+                engenheiro: true,
                 respostas: {
-                    orderBy: { criadaEm: 'desc' },
-                    take: 20
+                    select: {
+                        id: true,
+                        nivelDominante: true
+                    }
                 },
                 pgrs: {
-                    orderBy: { geradoEm: 'desc' }
+                    orderBy: { geradoEm: 'desc' },
+                    take: 1
                 }
             }
         });
 
         if (!empresa) return reply.status(404).send({ message: 'Empresa não encontrada' });
-        return empresa;
+
+        // Calcular métricas
+        const totalRespostas = empresa.respostas.length;
+        const distribuicaoRisco = empresa.respostas.reduce((acc, r) => {
+            const nivel = r.nivelDominante?.toLowerCase() || 'trivial';
+            acc[nivel] = (acc[nivel] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const ultimoPgrRaw = empresa.pgrs[0] || null;
+        const ultimoPgr = ultimoPgrRaw ? {
+            id: ultimoPgrRaw.id,
+            status: ultimoPgrRaw.status,
+            geradoEm: ultimoPgrRaw.geradoEm,
+            temDocx: !!ultimoPgrRaw.caminhoDocx,
+            temPdf: !!ultimoPgrRaw.caminhoPdf,
+            resumo: (ultimoPgrRaw.jsonGerado as any)?.resumo_executivo || null,
+            erroDetalhes: ultimoPgrRaw.status === 'REPROVADO' 
+                ? ultimoPgrRaw.observacoesEngenheiro?.split('\n\nStack:')[0]?.replace('ERRO AUTOMÁTICO: Error: ', '') 
+                : null
+        } : null;
+
+        return {
+            ...empresa,
+            totalRespostas,
+            distribuicaoRisco,
+            ultimoPgr
+        };
     });
 }
