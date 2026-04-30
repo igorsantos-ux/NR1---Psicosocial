@@ -105,10 +105,14 @@ export class GeminiService {
                 lastError = error;
                 console.error(`[Gemini] Falha na tentativa ${i + 1}: ${error.message}`);
                 
-                // Se for erro de cota (429 ou Quota Exceeded), esperamos mais tempo (60s)
-                if (error.message.includes('Quota exceeded') || error.message.includes('429')) {
-                    console.warn('[Gemini] Cota atingida. Aguardando 60 segundos para reset de limite...');
-                    await new Promise(resolve => setTimeout(resolve, 60000));
+                // Se for erro de cota ou sobrecarga, esperamos mais tempo
+                const isOverloaded = error.message.includes('high demand') || error.message.includes('503') || error.message.includes('overloaded');
+                const isQuotaExceeded = error.message.includes('Quota exceeded') || error.message.includes('429');
+
+                if (isQuotaExceeded || isOverloaded) {
+                    const waitTime = isOverloaded ? 15000 : 60000; // 15s para sobrecarga, 60s para cota
+                    console.warn(`[Gemini] ${isOverloaded ? 'Servidor sobrecarregado' : 'Cota atingida'}. Aguardando ${waitTime}ms para tentar novamente...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
                     continue; 
                 }
 
