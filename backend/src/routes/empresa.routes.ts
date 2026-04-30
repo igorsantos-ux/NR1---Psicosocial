@@ -219,6 +219,7 @@ export async function empresaRoutes(fastify: FastifyInstance) {
 
         return {
             ...empresa,
+            tokenColeta: empresa.tokenColeta,
             totalRespostas,
             distribuicaoRisco,
             ultimoPgr
